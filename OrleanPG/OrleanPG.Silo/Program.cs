@@ -5,7 +5,6 @@ using Orleans.Hosting;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using OrleanPG.Grains.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace OrleanPG.Silo

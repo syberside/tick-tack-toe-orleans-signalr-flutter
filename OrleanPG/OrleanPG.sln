@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrleanPG.Silo", "OrleanPG.Silo\OrleanPG.Silo.csproj", "{1A301AC0-278A-4BFA-A86B-77331319E234}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Silo", "OrleanPG.Silo\OrleanPG.Silo.csproj", "{1A301AC0-278A-4BFA-A86B-77331319E234}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrleanPG.Client", "OrleanPG.Client\OrleanPG.Client.csproj", "{A3BDE610-A9C2-476C-8DB9-E7096D5DA58E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Client", "OrleanPG.Client\OrleanPG.Client.csproj", "{A3BDE610-A9C2-476C-8DB9-E7096D5DA58E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrleanPG.Grains", "OrleanPG.Grains\OrleanPG.Grains.csproj", "{1F5F6C0A-769C-4BBC-8AD8-DEC35D91BA40}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Grains", "OrleanPG.Grains\OrleanPG.Grains.csproj", "{1F5F6C0A-769C-4BBC-8AD8-DEC35D91BA40}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrleanPG.Grains.Interfaces", "OrleanPG.Grains.Interfaces\OrleanPG.Grains.Interfaces.csproj", "{BF7FB010-10D6-4B2F-B448-3A95F9805FAB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Grains.Interfaces", "OrleanPG.Grains.Interfaces\OrleanPG.Grains.Interfaces.csproj", "{BF7FB010-10D6-4B2F-B448-3A95F9805FAB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrleanPG.Grains.UnitTests", "OrleanPG.Grains.UnitTests\OrleanPG.Grains.UnitTests.csproj", "{0B14DB80-46C3-4E13-988A-76DCC17990C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{BF7FB010-10D6-4B2F-B448-3A95F9805FAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BF7FB010-10D6-4B2F-B448-3A95F9805FAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BF7FB010-10D6-4B2F-B448-3A95F9805FAB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B14DB80-46C3-4E13-988A-76DCC17990C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B14DB80-46C3-4E13-988A-76DCC17990C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B14DB80-46C3-4E13-988A-76DCC17990C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B14DB80-46C3-4E13-988A-76DCC17990C7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

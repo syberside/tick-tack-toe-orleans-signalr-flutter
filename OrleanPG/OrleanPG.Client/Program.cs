@@ -59,7 +59,7 @@ namespace OrleanPG.Client
         private static async Task DoClientWork(IClusterClient client)
         {
             // example of calling grains from the initialized client
-            var game = client.GetGrain<ITickTackToeGameHolder>(0);
+            var game = client.GetGrain<ITickTacToeGameHolder>(0);
             while (true)
             {
                 Console.WriteLine("Press enter to send a message");

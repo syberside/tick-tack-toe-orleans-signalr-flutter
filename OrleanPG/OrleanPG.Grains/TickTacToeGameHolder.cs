@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace OrleanPG.Grains
 {
-    public class TickTackToeGameHolder : Grain, ITickTackToeGameHolder
+    public class TickTacToeGameHolder : Grain, ITickTacToeGameHolder
     {
-        private readonly ILogger<TickTackToeGameHolder> _logger;
+        private readonly ILogger<TickTacToeGameHolder> _logger;
 
-        public TickTackToeGameHolder(ILogger<TickTackToeGameHolder> logger)
+        public TickTacToeGameHolder(ILogger<TickTacToeGameHolder> logger)
         {
             _logger = logger;
         }
@@ -22,4 +22,5 @@ namespace OrleanPG.Grains
             return Task.FromResult(result);
         }
     }
+
 }

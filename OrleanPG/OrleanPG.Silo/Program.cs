@@ -6,6 +6,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using OrleanPG.Grains.Interfaces;
 
 namespace OrleanPG.Silo
 {
@@ -50,7 +51,8 @@ namespace OrleanPG.Silo
                     logging.AddConsole();
                 })
                 .ConfigureApplicationParts(parts => parts
-                    .AddApplicationPart(typeof(Game).Assembly).WithReferences());
+                    .AddApplicationPart(typeof(GameLobby).Assembly).WithReferences());
+
 
             var host = builder.Build();
             await host.StartAsync();

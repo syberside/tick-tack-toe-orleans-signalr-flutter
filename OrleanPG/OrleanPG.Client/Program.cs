@@ -4,37 +4,22 @@ using Orleans;
 using Orleans.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace OrleanPG.Client
 {
     class Program
     {
-        static int Main(string[] args)
+        public static async Task<int> Main(string[] args)
         {
-            return RunMainAsync().Result;
-        }
-
-        private static async Task<int> RunMainAsync()
-        {
-            try
+            using (var client = await ConnectClient())
             {
-                using (var client = await ConnectClient())
-                {
-                    await DoClientWork(client);
-                    Console.ReadKey();
-                }
-
-                return 0;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"\nException while trying to run client: {e.Message}");
-                Console.WriteLine("Make sure the silo the client is trying to connect to is running.");
-                Console.WriteLine("\nPress any key to exit.");
+                await DoClientWork(client);
                 Console.ReadKey();
-                return 1;
             }
+
+            return 0;
         }
 
         private static async Task<IClusterClient> ConnectClient()
@@ -57,90 +42,101 @@ namespace OrleanPG.Client
             return client;
         }
 
-        private static async Task DoClientWork(IClusterClient client)
+        private static async Task DoClientWork(IClusterClient clusterClient)
         {
-            var game = client.GetGrain<IGameLobby>(0);
+            var lobby = clusterClient.GetGrain<IGameLobby>(0);
+            await ListGamesAsync(lobby);
+
+            var token1 = await AuthorizeAsync(lobby, "1");
+            var token2 = await AuthorizeAsync(lobby, "2");
+
+            var gameCreateResult = await CreateGameAsync(lobby, token1, true);
+            await ListGamesAsync(lobby);
+
+            gameCreateResult = await CreateGameAsync(lobby, token2, false);
+            await ListGamesAsync(lobby);
+
+            var gameTokenFor1 = await EnterGameAsync(lobby, gameCreateResult.Id, token1);
+            var gameTokenFor2 = gameCreateResult.Id;
+
+            await ListGamesAsync(lobby);
+
+            await PlayAsync(clusterClient, token1, token2, gameCreateResult.Id);
+        }
+
+        private static async Task PlayAsync(IClusterClient clusterClient, AuthorizationToken gameTokenFor1, AuthorizationToken gameTokenFor2, GameId id)
+        {
+            var init = clusterClient.GetGrain<IGameInitializer>(id.Value.ToString());
+            //TODO: Intitialization should be called on join from lobby
+            await init.StartAsync(gameTokenFor1, gameTokenFor2);
+
+            var game = clusterClient.GetGrain<IGame>(id.Value.ToString());
+            var status = GameStatuses.XTurn;
             while (true)
             {
-                Console.WriteLine("Enter command: ");
-                var command = (Console.ReadLine() ?? string.Empty).Trim().ToLower();
-                switch (command)
+                AuthorizationToken token;
+                switch (status)
                 {
-                    default:
-                    case "": continue;
-                    case "q": break;
-                    case "l":
-                        await ListGamesAsync(game);
-                        continue;
-                    case "c":
-                        await CreateGameAsync(game);
-                        continue;
-                    case "e":
-                        await EnterGameAsync(game, client);
-                        continue;
-                    case "a1":
-                        await Authorize1Async(game);
-                        continue;
-                    case "a2":
-                        await Authorize2Async(game);
-                        continue;
+                    case GameStatuses.XTurn:
+                        token = gameTokenFor1;
+                        Console.WriteLine("XTurn");
+                        break;
+                    case GameStatuses.OTurn:
+                        token = gameTokenFor2;
+                        Console.WriteLine("OTurn");
+                        break;
+                    case GameStatuses.XWin:
+                        Console.WriteLine("XWin!");
+                        return;
+                    case GameStatuses.OWin:
+                        Console.WriteLine("OWin!");
+                        return;
+                    default: throw new NotImplementedException();
                 }
+
+                var input = Console.ReadLine().Trim().Split(" ").ToArray();
+                var x = int.Parse(input[0]);
+                var y = int.Parse(input[1]);
+                var state = await game.TurnAsync(x, y, token);
+                Console.WriteLine(state.GameMap.ToMapString(" | ", " ", "X", "O"));
+                status = state.Status;
             }
         }
 
-        private static AuthorizationToken _token2;
-
-        private static async Task Authorize2Async(IGameLobby game)
+        private static async Task<AuthorizationToken> AuthorizeAsync(IGameLobby lobby, string user)
         {
-            Console.WriteLine("Enter user 2 name:");
-            var user2Name = (Console.ReadLine() ?? "").Trim();
-            _token2 = await game.AuthorizeAsync(user2Name);
+            Console.WriteLine($"Enter user {user} name:");
+            var userName = (Console.ReadLine() ?? "").Trim();
+            Console.WriteLine();
+            return await lobby.AuthorizeAsync(userName);
         }
 
-        private static AuthorizationToken _token1;
-
-        private static async Task Authorize1Async(IGameLobby game)
+        private static async Task<GameToken> EnterGameAsync(IGameLobby lobby, GameId gameId, AuthorizationToken userToken)
         {
-            Console.WriteLine("Enter user 1 name:");
-            var user1Name = (Console.ReadLine() ?? "").Trim();
-            _token1 = await game.AuthorizeAsync(user1Name);
+            var resultToken = await lobby.JoinGameAsync(userToken, gameId);
+            Console.WriteLine("Entered game");
+            Console.WriteLine("");
+            return resultToken;
         }
 
-        private static async Task EnterGameAsync(IGameLobby game, IClusterClient cluster)
+        private static async Task<CreateGameResult> CreateGameAsync(IGameLobby lobby, AuthorizationToken token, bool isX)
         {
-            if (_token2 == null)
-            {
-                Console.WriteLine("Enter user 2 name first");
-            }
-            Console.WriteLine("Enter game id:");
-            var gameId = Guid.Parse(Console.ReadLine().Trim());
-            var token = await game.JoinGameAsync(_token2, new GameId(gameId));
-
-            var gameInitilizer = cluster.GetGrain<IGameInitializer>(token.Value);
-            await gameInitilizer.StartAsync(_token1, _token2);
-            var gameClient = cluster.GetGrain<IGame>(token.Value);
-            await gameClient.TurnAsync(0, 0, _token1);
+            var result = await lobby.CreateNewAsync(token, isX);
+            Console.WriteLine($"Created game: {result.Id}");
+            Console.WriteLine();
+            return result;
         }
 
-        private static async Task CreateGameAsync(IGameLobby game)
+        private static async Task ListGamesAsync(IGameLobby lobby)
         {
-            if (_token1 == null)
-            {
-                Console.WriteLine("Enter user 1 name first");
-            }
-            var token = await game.CreateNewAsync(_token1, new Random().Next(2) > 1);
-            //TODO: use token, how user 1 will now id of created game?
-        }
-
-        private Dictionary<GameId, GameToken> _user1Tokens = new Dictionary<GameId, GameToken>();
-
-        private static async Task ListGamesAsync(IGameLobby game)
-        {
-            var games = await game.FindGamesAsync();
+            var games = await lobby.FindGamesAsync();
+            Console.WriteLine("\t\tLobbies: ");
             foreach (var item in games)
             {
                 Console.WriteLine($"Game {item.Id}: {item.XPlayerName} VS {item.OPlayerName}");
             }
+            Console.WriteLine();
+
         }
     }
 }

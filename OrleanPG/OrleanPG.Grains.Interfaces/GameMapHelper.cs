@@ -2,11 +2,11 @@
 using System.Linq;
 using System.Text;
 
-namespace OrleanPG.Grains.UnitTests.Helpers
+namespace OrleanPG.Grains.Interfaces
 {
     public static class GameMapHelper
     {
-        public static string ToMapString(this bool?[,] map)
+        public static string ToMapString(this bool?[,] map, string separator = " , ", string nullValue = "null", string xValue = "true", string oValue = "false")
         {
             if (map == null)
             {
@@ -18,7 +18,7 @@ namespace OrleanPG.Grains.UnitTests.Helpers
                 var row = Enumerable.Range(0, map.GetLength(0))
                  .Select(x => map[i, x])
                  .ToArray();
-                sb.AppendLine($"{{{string.Join(" , ", row.Select(x => x == null ? "null" : x.ToString().ToLower()))}}}");
+                sb.AppendLine($"{{{string.Join(separator, row.Select(x => x == null ? nullValue : x.Value ? xValue : oValue))}}}");
             }
             return sb.ToString();
         }

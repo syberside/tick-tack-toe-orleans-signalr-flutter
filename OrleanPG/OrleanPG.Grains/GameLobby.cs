@@ -60,7 +60,7 @@ namespace OrleanPG.Grains
         public Task<GameGeneralInfo[]> FindGamesAsync()
         {
             var result = _gameTokens
-                .Select(x => new GameGeneralInfo(x.Key, TryGetUserName(x.Value.XPlayer), TryGetUserName(x.Value.OPlayer)))
+                .Select(x => new GameGeneralInfo() { Id = x.Key, XPlayerName = TryGetUserName(x.Value.XPlayer), OPlayerName = TryGetUserName(x.Value.OPlayer) })
                 .ToArray();
             return Task.FromResult(result);
         }

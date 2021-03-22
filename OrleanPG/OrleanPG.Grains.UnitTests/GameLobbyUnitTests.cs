@@ -73,14 +73,14 @@ namespace OrleanPG.Grains.UnitTests
         public async Task JoinGame_OnValidUserTokenAndGameId_ReturnsValidGameToken()
         {
             var userToken1 = await _lobby.AuthorizeAsync(_fixture.Create<string>());
-            var gameToken1 = await _lobby.CreateNewAsync(userToken1, _fixture.Create<bool>());
+            var createdGame = await _lobby.CreateNewAsync(userToken1, _fixture.Create<bool>());
             var userToken2 = await _lobby.AuthorizeAsync(_fixture.Create<string>());
             var gamesInfo = await _lobby.FindGamesAsync();
             var gameInfo = gamesInfo.Single();
 
             var gameToken2 = await _lobby.JoinGameAsync(userToken2, gameInfo.Id);
 
-            gameToken1.Should().Be(gameToken2);
+            createdGame.Should().Be(new CreateGameResult(gameInfo.Id, gameToken2));
         }
 
         [Fact]

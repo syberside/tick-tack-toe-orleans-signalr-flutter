@@ -50,7 +50,7 @@ namespace OrleanPG.Silo
                     logging.AddConsole();
                 })
                 .ConfigureApplicationParts(parts => parts
-                    .AddApplicationPart(typeof(TickTacToeGameHolder).Assembly).WithReferences());
+                    .AddApplicationPart(typeof(Game).Assembly).WithReferences());
 
             var host = builder.Build();
             await host.StartAsync();

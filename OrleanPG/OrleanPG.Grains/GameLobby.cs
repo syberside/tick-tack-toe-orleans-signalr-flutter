@@ -14,22 +14,18 @@ namespace OrleanPG.Grains
 
         public Task<AuthorizationToken> AuthorizeAsync(string username)
         {
-            if (username == null)
-            {
-                throw new ArgumentNullException();
-            }
             var token = new AuthorizationToken(Guid.NewGuid().ToString());
-            _userTokens[token] = username;
+            _userTokens[token] = username ?? throw new ArgumentNullException();
             return Task.FromResult(token);
         }
 
-        public Task<GameToken> CreateNewAsync(AuthorizationToken authToken, bool playForX)
+        public Task<CreateGameResult> CreateNewAsync(AuthorizationToken authToken, bool playForX)
         {
             ThrowIfUserTokenIsNotValid(authToken);
             var gameId = new GameId(Guid.NewGuid());
             var token = new GameToken(Guid.NewGuid().ToString());
             _gameTokens[gameId] = playForX ? new GameData(authToken, null, token) : new GameData(null, authToken, token);
-            return Task.FromResult(token);
+            return Task.FromResult(new CreateGameResult(gameId, token));
         }
 
         private void ThrowIfUserTokenIsNotValid(AuthorizationToken authToken)
@@ -79,7 +75,7 @@ namespace OrleanPG.Grains
             {
                 if (XPlayer == null)
                 {
-                    if(otherPlayer == OPlayer)
+                    if (otherPlayer == OPlayer)
                     {
                         throw new ArgumentException();
                     }
@@ -87,7 +83,7 @@ namespace OrleanPG.Grains
                 }
                 else
                 {
-                    if(otherPlayer == XPlayer)
+                    if (otherPlayer == XPlayer)
                     {
                         throw new ArgumentException();
 

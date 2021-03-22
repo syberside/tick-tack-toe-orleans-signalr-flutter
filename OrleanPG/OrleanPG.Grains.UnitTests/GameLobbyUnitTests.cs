@@ -1,6 +1,9 @@
 using AutoFixture;
 using FluentAssertions;
+using FluentAssertions.Execution;
+using Moq;
 using OrleanPG.Grains.Interfaces;
+using Orleans;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -70,30 +73,52 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Fact]
-        public async Task JoinGame_OnValidUserTokenAndGameId_ReturnsValidGameToken()
+        public async Task JoinGame_OnValidUserTokenAndGameId_StoresUserAndRunGame()
         {
-            var userToken1 = await _lobby.AuthorizeAsync(_fixture.Create<string>());
-            var createdGame = await _lobby.CreateNewAsync(userToken1, _fixture.Create<bool>());
-            var userToken2 = await _lobby.AuthorizeAsync(_fixture.Create<string>());
-            var gamesInfo = await _lobby.FindGamesAsync();
+            var mocked = new Mock<GameLobby>();
+            var lobby = mocked.Object;
+
+            var usernameX = _fixture.Create<string>();
+            var userToken1 = await lobby.AuthorizeAsync(usernameX);
+            var createdGame = await lobby.CreateNewAsync(userToken1, _fixture.Create<bool>());
+            var usernameO = _fixture.Create<string>();
+            var userToken2 = await lobby.AuthorizeAsync(usernameO);
+
+            var factoryMock = new Mock<IGrainFactory>();
+            var initializerMock = new Mock<IGameInitializer>();
+            factoryMock.Setup(x => x.GetGrain<IGameInitializer>(createdGame.Value.ToString(), null)).Returns(initializerMock.Object);
+            mocked.Setup(x => x.GrainFactory).Returns(factoryMock.Object);
+            await lobby.JoinGameAsync(userToken2, createdGame);
+
+            var gamesInfo = await lobby.FindGamesAsync();
             var gameInfo = gamesInfo.Single();
-
-            var gameToken2 = await _lobby.JoinGameAsync(userToken2, gameInfo.Id);
-
-            createdGame.Should().Be(new CreateGameResult(gameInfo.Id, gameToken2));
+            using (new AssertionScope())
+            {
+                gameInfo.Should().Be(new GameGeneralInfo() { Id = createdGame, XPlayerName = usernameX, OPlayerName = usernameO, });
+            }
+            initializerMock.Verify(x => x.StartAsync(userToken1, userToken2), Times.Once);
         }
 
         [Fact]
         public async Task JoinGame_OnValidUserTokenAndGameId_MarksGameAsStarted()
         {
-            var userToken1 = await _lobby.AuthorizeAsync(_fixture.Create<string>());
-            await _lobby.CreateNewAsync(userToken1, _fixture.Create<bool>());
-            var userToken2 = await _lobby.AuthorizeAsync(_fixture.Create<string>());
-            var gamesInfo = await _lobby.FindGamesAsync();
-            var gameInfo = gamesInfo.Single();
-            await _lobby.JoinGameAsync(userToken2, gameInfo.Id);
+            var mocked = new Mock<GameLobby>();
+            var lobby = mocked.Object;
 
-            gamesInfo = await _lobby.FindGamesAsync();
+            var userToken1 = await lobby.AuthorizeAsync(_fixture.Create<string>());
+            var createdGame = await lobby.CreateNewAsync(userToken1, _fixture.Create<bool>());
+            var userToken2 = await lobby.AuthorizeAsync(_fixture.Create<string>());
+            var gamesInfo = await lobby.FindGamesAsync();
+            var gameInfo = gamesInfo.Single();
+
+            var factoryMock = new Mock<IGrainFactory>();
+            var initializerMock = new Mock<IGameInitializer>();
+            factoryMock.Setup(x => x.GetGrain<IGameInitializer>(createdGame.Value.ToString(), null)).Returns(initializerMock.Object);
+            mocked.Setup(x => x.GrainFactory).Returns(factoryMock.Object);
+
+            await lobby.JoinGameAsync(userToken2, gameInfo.Id);
+
+            gamesInfo = await lobby.FindGamesAsync();
             gameInfo = gamesInfo.Single();
 
             gameInfo.IsRunning.Should().BeTrue();

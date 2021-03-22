@@ -12,6 +12,11 @@ namespace OrleanPG.Grains
         private readonly Dictionary<AuthorizationToken, string> _userTokens = new Dictionary<AuthorizationToken, string>();
         private readonly Dictionary<GameId, GameData> _gameTokens = new Dictionary<GameId, GameData>();
 
+        /// <summary>
+        /// Required for unit tests
+        /// </summary>
+        public new virtual IGrainFactory GrainFactory => base.GrainFactory;
+
         public Task<AuthorizationToken> AuthorizeAsync(string username)
         {
             var token = new AuthorizationToken(Guid.NewGuid().ToString());
@@ -19,13 +24,12 @@ namespace OrleanPG.Grains
             return Task.FromResult(token);
         }
 
-        public Task<CreateGameResult> CreateNewAsync(AuthorizationToken authToken, bool playForX)
+        public Task<GameId> CreateNewAsync(AuthorizationToken authToken, bool playForX)
         {
             ThrowIfUserTokenIsNotValid(authToken);
             var gameId = new GameId(Guid.NewGuid());
-            var token = new GameToken(Guid.NewGuid().ToString());
-            _gameTokens[gameId] = playForX ? new GameData(authToken, null, token) : new GameData(null, authToken, token);
-            return Task.FromResult(new CreateGameResult(gameId, token));
+            _gameTokens[gameId] = playForX ? new GameData(authToken, null) : new GameData(null, authToken);
+            return Task.FromResult(gameId);
         }
 
         private void ThrowIfUserTokenIsNotValid(AuthorizationToken authToken)
@@ -36,7 +40,7 @@ namespace OrleanPG.Grains
             }
         }
 
-        public Task<GameToken> JoinGameAsync(AuthorizationToken authToken, GameId id)
+        public async Task JoinGameAsync(AuthorizationToken authToken, GameId id)
         {
             ThrowIfUserTokenIsNotValid(authToken);
             if (id == null)
@@ -47,14 +51,17 @@ namespace OrleanPG.Grains
             {
                 throw new ArgumentException();
             }
-            var token = _gameTokens[id];
-            if (token == null)
+
+            var gameData = _gameTokens[id];
+            if (gameData == null)
             {
                 throw new ArgumentException($"Game not found: {id}");
             }
 
-            _gameTokens[id] = token.JoinPlayer(authToken);
-            return Task.FromResult(token.Token);
+            gameData = gameData.JoinPlayer(authToken);
+            _gameTokens[id] = gameData;
+            var init = GrainFactory.GetGrain<IGameInitializer>(id.Value.ToString());
+            await init.StartAsync(gameData.XPlayer, gameData.OPlayer);
         }
 
         public Task<GameGeneralInfo[]> FindGamesAsync()
@@ -67,7 +74,7 @@ namespace OrleanPG.Grains
 
         private string? TryGetUserName(AuthorizationToken? token) => token == null ? null : _userTokens[token];
 
-        private record GameData(AuthorizationToken? XPlayer, AuthorizationToken? OPlayer, GameToken Token)
+        private record GameData(AuthorizationToken? XPlayer, AuthorizationToken? OPlayer)
         {
             public bool IsRunning => XPlayer != null && OPlayer != null;
 

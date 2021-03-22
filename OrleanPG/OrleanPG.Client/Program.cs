@@ -50,26 +50,21 @@ namespace OrleanPG.Client
             var token1 = await AuthorizeAsync(lobby, "1");
             var token2 = await AuthorizeAsync(lobby, "2");
 
-            var gameCreateResult = await CreateGameAsync(lobby, token1, true);
+            var gameId = await CreateGameAsync(lobby, token1, true);
             await ListGamesAsync(lobby);
 
-            gameCreateResult = await CreateGameAsync(lobby, token2, false);
+            gameId = await CreateGameAsync(lobby, token2, false);
             await ListGamesAsync(lobby);
 
-            var gameTokenFor1 = await EnterGameAsync(lobby, gameCreateResult.Id, token1);
-            var gameTokenFor2 = gameCreateResult.Id;
+            await EnterGameAsync(lobby, gameId, token1);
 
             await ListGamesAsync(lobby);
 
-            await PlayAsync(clusterClient, token1, token2, gameCreateResult.Id);
+            await PlayAsync(clusterClient, token1, token2, gameId);
         }
 
         private static async Task PlayAsync(IClusterClient clusterClient, AuthorizationToken gameTokenFor1, AuthorizationToken gameTokenFor2, GameId id)
         {
-            var init = clusterClient.GetGrain<IGameInitializer>(id.Value.ToString());
-            //TODO: Intitialization should be called on join from lobby
-            await init.StartAsync(gameTokenFor1, gameTokenFor2);
-
             var game = clusterClient.GetGrain<IGame>(id.Value.ToString());
             var status = GameStatuses.XTurn;
             while (true)
@@ -111,18 +106,17 @@ namespace OrleanPG.Client
             return await lobby.AuthorizeAsync(userName);
         }
 
-        private static async Task<GameToken> EnterGameAsync(IGameLobby lobby, GameId gameId, AuthorizationToken userToken)
+        private static async Task EnterGameAsync(IGameLobby lobby, GameId gameId, AuthorizationToken userToken)
         {
-            var resultToken = await lobby.JoinGameAsync(userToken, gameId);
+            await lobby.JoinGameAsync(userToken, gameId);
             Console.WriteLine("Entered game");
             Console.WriteLine("");
-            return resultToken;
         }
 
-        private static async Task<CreateGameResult> CreateGameAsync(IGameLobby lobby, AuthorizationToken token, bool isX)
+        private static async Task<GameId> CreateGameAsync(IGameLobby lobby, AuthorizationToken token, bool isX)
         {
             var result = await lobby.CreateNewAsync(token, isX);
-            Console.WriteLine($"Created game: {result.Id}");
+            Console.WriteLine($"Created game: {result}");
             Console.WriteLine();
             return result;
         }

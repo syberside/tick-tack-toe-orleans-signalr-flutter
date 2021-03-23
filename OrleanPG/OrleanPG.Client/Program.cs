@@ -65,7 +65,7 @@ namespace OrleanPG.Client
 
         private static async Task PlayAsync(IClusterClient clusterClient, AuthorizationToken gameTokenFor1, AuthorizationToken gameTokenFor2, GameId id)
         {
-            var game = clusterClient.GetGrain<IGame>(id.Value.ToString());
+            var game = clusterClient.GetGrain<IGame>(id.Value);
             var status = GameStatuses.XTurn;
             while (true)
             {

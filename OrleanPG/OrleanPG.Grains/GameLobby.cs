@@ -60,7 +60,7 @@ namespace OrleanPG.Grains
 
             gameData = gameData.JoinPlayer(authToken);
             _gameTokens[id] = gameData;
-            var init = GrainFactory.GetGrain<IGameInitializer>(id.Value.ToString());
+            var init = GrainFactory.GetGrain<IGameInitializer>(id.Value);
             await init.StartAsync(gameData.XPlayer, gameData.OPlayer);
         }
 

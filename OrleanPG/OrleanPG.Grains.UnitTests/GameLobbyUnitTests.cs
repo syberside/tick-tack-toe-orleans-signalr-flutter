@@ -86,7 +86,7 @@ namespace OrleanPG.Grains.UnitTests
 
             var factoryMock = new Mock<IGrainFactory>();
             var initializerMock = new Mock<IGameInitializer>();
-            factoryMock.Setup(x => x.GetGrain<IGameInitializer>(createdGame.Value.ToString(), null)).Returns(initializerMock.Object);
+            factoryMock.Setup(x => x.GetGrain<IGameInitializer>(createdGame.Value, null)).Returns(initializerMock.Object);
             mocked.Setup(x => x.GrainFactory).Returns(factoryMock.Object);
             await lobby.JoinGameAsync(userToken2, createdGame);
 
@@ -113,7 +113,7 @@ namespace OrleanPG.Grains.UnitTests
 
             var factoryMock = new Mock<IGrainFactory>();
             var initializerMock = new Mock<IGameInitializer>();
-            factoryMock.Setup(x => x.GetGrain<IGameInitializer>(createdGame.Value.ToString(), null)).Returns(initializerMock.Object);
+            factoryMock.Setup(x => x.GetGrain<IGameInitializer>(createdGame.Value, null)).Returns(initializerMock.Object);
             mocked.Setup(x => x.GrainFactory).Returns(factoryMock.Object);
 
             await lobby.JoinGameAsync(userToken2, gameInfo.Id);

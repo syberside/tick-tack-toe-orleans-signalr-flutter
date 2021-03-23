@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace OrleanPG.Grains.Interfaces
 {
-    public interface IGameLobby : IGrainWithIntegerKey
+    public interface IGameLobby : IGrainWithGuidKey
     {
         Task<AuthorizationToken> AuthorizeAsync(string username);
         Task<GameGeneralInfo[]> FindGamesAsync();

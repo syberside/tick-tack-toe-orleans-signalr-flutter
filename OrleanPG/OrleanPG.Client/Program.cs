@@ -44,7 +44,7 @@ namespace OrleanPG.Client
 
         private static async Task DoClientWork(IClusterClient clusterClient)
         {
-            var lobby = clusterClient.GetGrain<IGameLobby>(0);
+            var lobby = clusterClient.GetGrain<IGameLobby>(Guid.Empty);
             await ListGamesAsync(lobby);
 
             var token1 = await AuthorizeAsync(lobby, "1");

@@ -1,5 +1,4 @@
-﻿using OrleanPG.Grains;
-using Orleans;
+﻿using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
 using System;
@@ -7,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using OrleanPG.Grains.Interfaces;
+using OrleanPG.Grains.GameLobbyGrain;
 
 namespace OrleanPG.Silo
 {
@@ -41,6 +41,9 @@ namespace OrleanPG.Silo
             // define the cluster configuration
             var builder = new SiloHostBuilder()
                 .UseLocalhostClustering()
+                .AddMemoryGrainStorage("game_states_store")
+                .AddMemoryGrainStorage("user_states_store")
+                .AddMemoryGrainStorage("game_state_store")
                 .Configure<ClusterOptions>(options =>
                 {
                     options.ClusterId = "dev";

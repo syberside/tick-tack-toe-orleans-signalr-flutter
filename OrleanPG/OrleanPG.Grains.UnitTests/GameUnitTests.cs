@@ -1,36 +1,38 @@
-﻿using AutoFixture;
-using AutoFixture.Dsl;
-using AutoFixture.Kernel;
-using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit2;
 using FluentAssertions;
-using FluentAssertions.Execution;
-using Microsoft.Extensions.Logging;
 using Moq;
+using OrleanPG.Grains.GameGrain;
+using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Interfaces;
+using Orleans.Runtime;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace OrleanPG.Grains.UnitTests
 {
+    /// <summary>
+    /// TODO: Because state providers were added tests should be refactored to presetup state and dont use SUT methods to modify data.
+    /// </summary>
     public class GameUnitTests
     {
-        private readonly Fixture _fixture = new Fixture();
-        private readonly Game _game = new Game(new Mock<ILogger<Game>>().Object);
+        private readonly Mock<IPersistentState<GameStorageData>> _storeMock;
+        private readonly Game _game;
+
+        public GameUnitTests()
+        {
+            _storeMock = PersistanceHelper.CreateAndSetupStateWriteMock<GameStorageData>();
+            _game = new Game(_storeMock.Object);
+        }
 
         [Theory, AutoData]
         public async Task StartAsync_OnNotInitialized_AssignsPlayers(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             await _game.StartAsync(tokenX, tokenO);
 
-            using (new AssertionScope())
-            {
-                _game.XPlayer.Should().Be(tokenX);
-                _game.OPlayer.Should().Be(tokenO);
-                _game.IsInitialized.Should().BeTrue();
 
-            }
+            _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.XTurn, new GameMap()));
+            _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
         }
 
         [Theory, AutoData]
@@ -116,8 +118,25 @@ namespace OrleanPG.Grains.UnitTests
             var status = await _game.TurnAsync(0, 0, tokenX);
 
 
-            status.Status.Should().Be(GameStatuses.OTurn, status.GameMap.ToMapString());
+            var gameMap = new GameMap();
+            gameMap[0, 0] = true;
+            status.Should().Be(new GameStatusDto(GameState.OTurn, gameMap));
         }
+
+        [Theory, AutoData]
+        public async Task TurnAsync_OnXTurn_StoresOTurn(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        {
+            await _game.StartAsync(tokenX, tokenO);
+
+            var status = await _game.TurnAsync(0, 0, tokenX);
+
+            var gameMap = new GameMap();
+            gameMap[0, 0] = true;
+            _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.OTurn, gameMap));
+            _storeMock.Verify(x => x.WriteStateAsync(), Times.Exactly(2));
+        }
+
+
 
         [Theory, AutoData]
         public async Task TurnAsync_OnOTurn_ReturnsXTurn(AuthorizationToken tokenX, AuthorizationToken tokenO)
@@ -127,7 +146,22 @@ namespace OrleanPG.Grains.UnitTests
             await _game.TurnAsync(0, 0, tokenX);
             var status = await _game.TurnAsync(0, 1, tokenO);
 
-            status.Status.Should().Be(GameStatuses.XTurn, status.GameMap.ToMapString());
+            status.Status.Should().Be(GameState.XTurn, status.GameMap.ToMapString());
+        }
+
+        [Theory, AutoData]
+        public async Task TurnAsync_OnOTurn_StoresXTurn(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        {
+            await _game.StartAsync(tokenX, tokenO);
+
+            await _game.TurnAsync(0, 0, tokenX);
+            var status = await _game.TurnAsync(0, 1, tokenO);
+
+            var gameMap = new GameMap();
+            gameMap[0, 0] = true;
+            gameMap[0, 1] = false;
+            _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.XTurn, gameMap));
+            _storeMock.Verify(x => x.WriteStateAsync(), Times.Exactly(3));
         }
 
         [Theory, AutoData]
@@ -141,7 +175,8 @@ namespace OrleanPG.Grains.UnitTests
             }
             var status = await _game.TurnAsync(0, Game.GameSize - 1, tokenX);
 
-            status.Status.Should().Be(GameStatuses.XWin, status.GameMap.ToMapString());
+            status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
+            _storeMock.Object.State.Status.Should().Be(GameState.XWin);
         }
 
         [Theory, AutoData]
@@ -155,7 +190,8 @@ namespace OrleanPG.Grains.UnitTests
             }
             var status = await _game.TurnAsync(Game.GameSize - 1, 0, tokenX);
 
-            status.Status.Should().Be(GameStatuses.XWin, status.GameMap.ToMapString());
+            status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
+            _storeMock.Object.State.Status.Should().Be(GameState.XWin);
         }
 
         [Theory, AutoData]
@@ -169,7 +205,8 @@ namespace OrleanPG.Grains.UnitTests
             }
             var status = await _game.TurnAsync(Game.GameSize - 1, Game.GameSize - 1, tokenX);
 
-            status.Status.Should().Be(GameStatuses.XWin, status.GameMap.ToMapString());
+            status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
+            _storeMock.Object.State.Status.Should().Be(GameState.XWin);
         }
 
         [Theory, AutoData]
@@ -183,7 +220,8 @@ namespace OrleanPG.Grains.UnitTests
             }
             var status = await _game.TurnAsync(Game.GameSize - 1, 0, tokenX);
 
-            status.Status.Should().Be(GameStatuses.XWin, status.GameMap.ToMapString());
+            status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
+            _storeMock.Object.State.Status.Should().Be(GameState.XWin);
         }
     }
 }

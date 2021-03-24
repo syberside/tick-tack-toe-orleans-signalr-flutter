@@ -9,11 +9,11 @@ namespace OrleanPG.Grains.UnitTests.Helpers
         [Fact]
         public void ToMapString_Always_ReturnsCorrectString()
         {
-            var map = new bool?[3, 3] {
+            var map = new GameMap(new bool?[3, 3] {
                 { null, true, false},
                 { null, true, false},
                 { null, true, false},
-            };
+            });
             map.ToMapString().Should().Be("{null , true , false}\r\n{null , true , false}\r\n{null , true , false}\r\n");
         }
     }

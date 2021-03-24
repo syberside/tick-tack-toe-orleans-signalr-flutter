@@ -1,6 +1,6 @@
 ﻿namespace OrleanPG.Grains.Interfaces
 {
-    public enum GameStatuses
+    public enum GameState
     {
         XTurn = 1,
         OTurn = 2,

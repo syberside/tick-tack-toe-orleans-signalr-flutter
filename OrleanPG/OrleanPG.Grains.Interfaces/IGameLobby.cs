@@ -7,7 +7,7 @@ namespace OrleanPG.Grains.Interfaces
     public interface IGameLobby : IGrainWithGuidKey
     {
         Task<AuthorizationToken> AuthorizeAsync(string username);
-        Task<GameGeneralInfo[]> FindGamesAsync();
+        Task<GameListItemDto[]> FindGamesAsync();
 
         Task JoinGameAsync(AuthorizationToken authToken, GameId id);
 

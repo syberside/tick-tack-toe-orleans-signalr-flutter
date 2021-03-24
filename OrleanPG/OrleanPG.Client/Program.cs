@@ -66,24 +66,24 @@ namespace OrleanPG.Client
         private static async Task PlayAsync(IClusterClient clusterClient, AuthorizationToken gameTokenFor1, AuthorizationToken gameTokenFor2, GameId id)
         {
             var game = clusterClient.GetGrain<IGame>(id.Value);
-            var status = GameStatuses.XTurn;
+            var status = GameState.XTurn;
             while (true)
             {
                 AuthorizationToken token;
                 switch (status)
                 {
-                    case GameStatuses.XTurn:
+                    case GameState.XTurn:
                         token = gameTokenFor1;
                         Console.WriteLine("XTurn");
                         break;
-                    case GameStatuses.OTurn:
+                    case GameState.OTurn:
                         token = gameTokenFor2;
                         Console.WriteLine("OTurn");
                         break;
-                    case GameStatuses.XWin:
+                    case GameState.XWin:
                         Console.WriteLine("XWin!");
                         return;
-                    case GameStatuses.OWin:
+                    case GameState.OWin:
                         Console.WriteLine("OWin!");
                         return;
                     default: throw new NotImplementedException();

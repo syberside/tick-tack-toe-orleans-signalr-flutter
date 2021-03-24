@@ -5,7 +5,7 @@ namespace OrleanPG.Grains.Interfaces
     /// <summary>
     /// NOTE:  `record` keyword can't be used as because this DTO is used in array
     /// </summary>
-    public class GameGeneralInfo
+    public class GameListItemDto
     {
         public GameId Id { get; init; }
         public string? XPlayerName { get; init; }
@@ -14,7 +14,7 @@ namespace OrleanPG.Grains.Interfaces
 
         public override bool Equals(object? obj)
         {
-            return obj is GameGeneralInfo info &&
+            return obj is GameListItemDto info &&
                    EqualityComparer<GameId>.Default.Equals(Id, info.Id) &&
                    XPlayerName == info.XPlayerName &&
                    OPlayerName == info.OPlayerName;

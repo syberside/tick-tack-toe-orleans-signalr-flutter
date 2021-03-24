@@ -1,28 +1,28 @@
 ﻿using Microsoft.Extensions.Logging;
 using OrleanPG.Grains.Interfaces;
 using Orleans;
+using Orleans.Runtime;
 using System;
 using System.Threading.Tasks;
 
-namespace OrleanPG.Grains
+namespace OrleanPG.Grains.GameGrain
 {
     public class Game : Grain, IGame, IGameInitializer
     {
-        private readonly ILogger<Game> _logger;
-        private GameStatus _status;
-        public AuthorizationToken? XPlayer { get; private set; }
-        public AuthorizationToken? OPlayer { get; private set; }
-        public const int GameSize = 3;
+        private readonly IPersistentState<GameStorageData> _gameState;
+
+        public const int GameSize = GameMap.GameSize;
         private const int _maxIndex = GameSize - 1;
 
 
-        public Game(ILogger<Game> logger)
+        public Game(
+            [PersistentState("game_game_state", "game_state_store")] IPersistentState<GameStorageData> gameState
+            )
         {
-            _logger = logger;
-            _status = new GameStatus(GameStatuses.XTurn, new bool?[GameSize, GameSize]);
+            _gameState = gameState;
         }
 
-        public Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)
+        public async Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)
         {
             if (playerX == null)
             {
@@ -36,20 +36,18 @@ namespace OrleanPG.Grains
             {
                 throw new ArgumentException();
             }
-            if (IsInitialized)
+            if (_gameState.State.IsInitialized)
             {
                 throw new InvalidOperationException();
             }
-            XPlayer = playerX;
-            OPlayer = playerO;
-            return Task.CompletedTask;
+            _gameState.State = _gameState.State with { XPlayer = playerX, OPlayer = playerO };
+            await _gameState.WriteStateAsync();
         }
 
-        public bool IsInitialized => XPlayer != null && OPlayer != null;
 
-        public Task<GameStatus> TurnAsync(int x, int y, AuthorizationToken player)
+        public async Task<GameStatusDto> TurnAsync(int x, int y, AuthorizationToken player)
         {
-            if (!IsInitialized)
+            if (!_gameState.State.IsInitialized)
             {
                 throw new InvalidOperationException();
             }
@@ -61,26 +59,26 @@ namespace OrleanPG.Grains
             {
                 throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameSize}");
             }
-            if (_status.GameMap[x, y] != null)
+            if (_gameState.State.Map[x, y] != null)
             {
-                throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(_status.GameMap[x, y] == true ? "X" : "Y")}");
+                throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(_gameState.State.Map[x, y] == true ? "X" : "Y")}");
             }
 
             bool stepMarker;
-            switch (_status.Status)
+            switch (_gameState.State.Status)
             {
-                case GameStatuses.OWin:
-                case GameStatuses.XWin:
+                case GameState.OWin:
+                case GameState.XWin:
                     throw new InvalidOperationException();
-                case GameStatuses.XTurn:
-                    if (player != XPlayer)
+                case GameState.XTurn:
+                    if (player != _gameState.State.XPlayer)
                     {
                         throw new InvalidOperationException();
                     }
                     stepMarker = true;
                     break;
-                case GameStatuses.OTurn:
-                    if (player != OPlayer)
+                case GameState.OTurn:
+                    if (player != _gameState.State.OPlayer)
                     {
                         throw new InvalidOperationException();
                     }
@@ -92,16 +90,21 @@ namespace OrleanPG.Grains
             }
 
 
-            var map = (bool?[,])_status.GameMap.Clone();
+            var map = _gameState.State.Map.Clone();
             map[x, y] = stepMarker;
             var status = GetNewStatus(stepMarker, x, y, map);
 
-            _status = _status with { GameMap = map, Status = status };
+            _gameState.State = _gameState.State with
+            {
+                Status = status,
+                Map = map,
+            };
+            await _gameState.WriteStateAsync();
 
-            return Task.FromResult(_status);
+            return new GameStatusDto(status, map);
         }
 
-        private GameStatuses GetNewStatus(bool stepMarker, int x, int y, bool?[,] gameMap)
+        private GameState GetNewStatus(bool stepMarker, int x, int y, GameMap gameMap)
         {
             //check row
             for (var i = 0; i < GameSize; i++)
@@ -112,7 +115,7 @@ namespace OrleanPG.Grains
                 }
                 if (i == GameSize - 1)
                 {
-                    return stepMarker ? GameStatuses.XWin : GameStatuses.OWin;
+                    return stepMarker ? GameState.XWin : GameState.OWin;
 
                 }
             }
@@ -126,7 +129,7 @@ namespace OrleanPG.Grains
                 }
                 if (i == GameSize - 1)
                 {
-                    return stepMarker ? GameStatuses.XWin : GameStatuses.OWin;
+                    return stepMarker ? GameState.XWin : GameState.OWin;
 
                 }
             }
@@ -142,7 +145,7 @@ namespace OrleanPG.Grains
                     }
                     if (i == GameSize - 1)
                     {
-                        return stepMarker ? GameStatuses.XWin : GameStatuses.OWin;
+                        return stepMarker ? GameState.XWin : GameState.OWin;
 
                     }
                 }
@@ -160,13 +163,13 @@ namespace OrleanPG.Grains
                     }
                     if (i == GameSize - 1)
                     {
-                        return stepMarker ? GameStatuses.XWin : GameStatuses.OWin;
+                        return stepMarker ? GameState.XWin : GameState.OWin;
 
                     }
                 }
             }
 
-            return stepMarker ? GameStatuses.OTurn : GameStatuses.XTurn;
+            return stepMarker ? GameState.OTurn : GameState.XTurn;
         }
     }
 }

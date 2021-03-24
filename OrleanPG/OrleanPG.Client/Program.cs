@@ -45,7 +45,14 @@ namespace OrleanPG.Client
         private static async Task DoClientWork(IClusterClient clusterClient)
         {
             var lobby = clusterClient.GetGrain<IGameLobby>(Guid.Empty);
-            await ListGamesAsync(lobby);
+            var games = await ListGamesAsync(lobby);
+            foreach (var game in games)
+            {
+                var gameMap = await GetGameMap(clusterClient, game.Id);
+                Console.WriteLine($"Game status for {game.Id}");
+                Console.WriteLine(gameMap.ToMapString(" | ", " ", "X", "O"));
+                Console.WriteLine();
+            }
 
             var token1 = await AuthorizeAsync(lobby, "1");
             var token2 = await AuthorizeAsync(lobby, "2");
@@ -61,6 +68,13 @@ namespace OrleanPG.Client
             await ListGamesAsync(lobby);
 
             await PlayAsync(clusterClient, token1, token2, gameId);
+        }
+
+        private static async Task<GameMap> GetGameMap(IClusterClient clusterClient, GameId id)
+        {
+            var game = clusterClient.GetGrain<IGame>(id.Value);
+            var data = await game.GetMapAsync();
+            return data;
         }
 
         private static async Task PlayAsync(IClusterClient clusterClient, AuthorizationToken gameTokenFor1, AuthorizationToken gameTokenFor2, GameId id)
@@ -121,7 +135,7 @@ namespace OrleanPG.Client
             return result;
         }
 
-        private static async Task ListGamesAsync(IGameLobby lobby)
+        private static async Task<GameListItemDto[]> ListGamesAsync(IGameLobby lobby)
         {
             var games = await lobby.FindGamesAsync();
             Console.WriteLine("\t\tLobbies: ");
@@ -130,7 +144,7 @@ namespace OrleanPG.Client
                 Console.WriteLine($"Game {item.Id}: {item.XPlayerName} VS {item.OPlayerName}");
             }
             Console.WriteLine();
-
+            return games;
         }
     }
 }

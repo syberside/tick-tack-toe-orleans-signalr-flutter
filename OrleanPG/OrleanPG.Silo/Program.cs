@@ -5,19 +5,16 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using OrleanPG.Grains.Interfaces;
 using OrleanPG.Grains.GameLobbyGrain;
+using Newtonsoft.Json;
+using System.Collections.Generic;
+using OrleanPG.Grains.Interfaces;
 
 namespace OrleanPG.Silo
 {
     class Program
     {
-        public static int Main(string[] args)
-        {
-            return MainAsync().Result;
-        }
-
-        private static async Task<int> MainAsync()
+        public static async Task<int> Main(string[] args)
         {
             try
             {
@@ -36,14 +33,15 @@ namespace OrleanPG.Silo
             }
         }
 
+
         private static async Task<ISiloHost> StartSilo()
         {
             // define the cluster configuration
             var builder = new SiloHostBuilder()
                 .UseLocalhostClustering()
-                .AddMemoryGrainStorage("game_states_store")
-                .AddMemoryGrainStorage("user_states_store")
-                .AddMemoryGrainStorage("game_state_store")
+                .AddAzureTableGrainStorage("game_states_store", SetupStore)
+                .AddAzureTableGrainStorage("user_states_store", SetupStore)
+                .AddAzureTableGrainStorage("game_state_store", SetupStore)
                 .Configure<ClusterOptions>(options =>
                 {
                     options.ClusterId = "dev";
@@ -60,6 +58,12 @@ namespace OrleanPG.Silo
             var host = builder.Build();
             await host.StartAsync();
             return host;
+        }
+
+        private static void SetupStore(AzureTableStorageOptions options)
+        {
+            options.UseJson = true;
+            options.ConnectionString = "DefaultEndpointsProtocol=https;AccountName=ticktactorstorage;AccountKey=fZ88n7XGOZiAMvvgKJawqQqqaHV47bNNfd3V3WckvJue0HezVu5VPWli4gi0IRWZ3wiMn0li5rIp5ArcmHHdrA==;EndpointSuffix=core.windows.net";
         }
     }
 }

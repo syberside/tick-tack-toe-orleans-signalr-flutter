@@ -171,5 +171,10 @@ namespace OrleanPG.Grains.GameGrain
 
             return stepMarker ? GameState.OTurn : GameState.XTurn;
         }
+
+        public Task<GameMap> GetMapAsync()
+        {
+            return Task.FromResult(_gameState.State.Map);
+        }
     }
 }

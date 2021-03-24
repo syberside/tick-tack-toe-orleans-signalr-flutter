@@ -34,7 +34,7 @@ namespace OrleanPG.Grains.GameLobbyGrain
             return token;
         }
 
-        public async Task<GameId> CreateNewAsync(AuthorizationToken authToken, bool playForX)
+        public async Task<GameId> CreateGameAsync(AuthorizationToken authToken, bool playForX)
         {
             ThrowIfUserTokenIsNotValid(authToken);
             var gameId = new GameId(Guid.NewGuid());

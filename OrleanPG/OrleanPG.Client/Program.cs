@@ -115,7 +115,7 @@ namespace OrleanPG.Client
 
         private static async Task<GameId> CreateGameAsync(IGameLobby lobby, AuthorizationToken token, bool isX)
         {
-            var result = await lobby.CreateNewAsync(token, isX);
+            var result = await lobby.CreateGameAsync(token, isX);
             Console.WriteLine($"Created game: {result}");
             Console.WriteLine();
             return result;

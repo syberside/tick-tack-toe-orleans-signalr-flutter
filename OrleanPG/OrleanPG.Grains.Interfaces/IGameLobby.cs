@@ -11,6 +11,6 @@ namespace OrleanPG.Grains.Interfaces
 
         Task JoinGameAsync(AuthorizationToken authToken, GameId id);
 
-        Task<GameId> CreateNewAsync(AuthorizationToken authToken, bool playForX);
+        Task<GameId> CreateGameAsync(AuthorizationToken authToken, bool playForX);
     }
 }

@@ -14,12 +14,16 @@ namespace OrleanPG.Grains.UnitTests
     public class GameUnitTests
     {
         private readonly Mock<IPersistentState<GameStorageData>> _storeMock;
+        private readonly Mock<Game> _mockedGame;
         private readonly Game _game;
 
         public GameUnitTests()
         {
             _storeMock = PersistanceHelper.CreateAndSetupStateWriteMock<GameStorageData>();
-            _game = new Game(_storeMock.Object);
+            _mockedGame = new Mock<Game>(() => new Game(_storeMock.Object));
+            // suppress base RegisterOrUpdateReminder calls
+            _mockedGame.Setup(x => x.RegisterOrUpdateReminder(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>())).ReturnsAsync((IGrainReminder)null);
+            _game = _mockedGame.Object;
         }
 
         #region StartAsync
@@ -60,6 +64,14 @@ namespace OrleanPG.Grains.UnitTests
         {
             Func<Task> act = async () => await _game.StartAsync(token, token);
             await act.Should().ThrowAsync<ArgumentException>();
+        }
+
+        [Theory, AutoData]
+        public async Task StartAsync_OnNotInitialized_SetTimeoutReminder(AuthorizationToken playerX, AuthorizationToken playerO)
+        {
+            await _game.StartAsync(playerX, playerO);
+
+            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(Game.TimeoutCheckReminderName, Game.TimeoutPeriod, Game.TimeoutPeriod));
         }
         #endregion
 
@@ -129,7 +141,6 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.OTurn, gameMap));
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Exactly(1));
         }
-
 
 
         [Theory, AutoData]
@@ -227,6 +238,77 @@ namespace OrleanPG.Grains.UnitTests
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);
         }
+
+        [Theory, AutoData]
+        public async Task TurnAsync_OnXTurn_ResetsTimeoutReminder(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        {
+            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
+
+            await _game.TurnAsync(0, 0, tokenX);
+
+            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(Game.TimeoutCheckReminderName, Game.TimeoutPeriod, Game.TimeoutPeriod));
+        }
+
+        [Theory, AutoData]
+        public async Task TurnAsync_OnYTurn_ResetsTimeoutReminder(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        {
+            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
+
+            await _game.TurnAsync(0, 0, tokenO);
+
+            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(Game.TimeoutCheckReminderName, Game.TimeoutPeriod, Game.TimeoutPeriod));
+        }
+        #endregion
+
+        #region
+        [Theory]
+        [InlineAutoData(GameState.TimedOut)]
+        [InlineAutoData(GameState.XWin)]
+        [InlineAutoData(GameState.OWin)]
+        public async Task ReceiveReminder_OnGameInEndState_CancelsReminder(GameState gameState)
+        {
+            var reminderMock = new Mock<IGrainReminder>();
+            _mockedGame.Setup(x => x.GetReminder(Game.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
+            var _game = _mockedGame.Object;
+            _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
+
+            await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
+
+            _storeMock.Object.State.Status.Should().Be(gameState);
+            _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
+
+        }
+
+        [Theory]
+        [InlineAutoData(GameState.OTurn)]
+        [InlineAutoData(GameState.XTurn)]
+        public async Task ReceiveReminder_OnGameInNotEndState_EndsGame(GameState gameState)
+        {
+            var reminderMock = new Mock<IGrainReminder>();
+            _mockedGame.Setup(x => x.GetReminder(Game.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
+            _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
+
+            await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
+
+            _storeMock.Object.State.Status.Should().Be(GameState.TimedOut);
+            _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
+        }
+
+        [Theory]
+        [InlineAutoData(GameState.OTurn)]
+        [InlineAutoData(GameState.XTurn)]
+        public async Task ReceiveReminder_OnGameInNotEndState_CancelsReminder(GameState gameState)
+        {
+            var reminderMock = new Mock<IGrainReminder>();
+            _mockedGame.Setup(x => x.GetReminder(Game.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
+            _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
+
+            await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
+
+            _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
+        }
+
+        //TODO: Test for reminder update on each turn
         #endregion
     }
 }

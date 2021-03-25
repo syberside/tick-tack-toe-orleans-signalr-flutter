@@ -11,7 +11,7 @@ namespace OrleanPG.Grains.Interfaces
         Task<GameMap> GetMapAsync();
     }
 
-    public interface IGameInitializer : IGrainWithGuidKey
+    public interface IGameInitializer : IRemindable, IGrainWithGuidKey
     {
         Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO);
     }

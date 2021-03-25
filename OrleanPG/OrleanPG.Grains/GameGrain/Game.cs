@@ -11,6 +11,8 @@ namespace OrleanPG.Grains.GameGrain
     {
         private readonly IPersistentState<GameStorageData> _gameState;
 
+        public const string TimeoutCheckReminderName = "timeout_check";
+        public static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
         public const int GameSize = GameMap.GameSize;
         private const int _maxIndex = GameSize - 1;
 
@@ -42,6 +44,7 @@ namespace OrleanPG.Grains.GameGrain
             }
             _gameState.State = _gameState.State with { XPlayer = playerX, OPlayer = playerO };
             await _gameState.WriteStateAsync();
+            await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
         }
 
 
@@ -84,9 +87,10 @@ namespace OrleanPG.Grains.GameGrain
                     }
                     stepMarker = false;
                     break;
+                case GameState.TimedOut:
+                    throw new InvalidOperationException();
                 default:
                     throw new NotSupportedException();
-
             }
 
 
@@ -100,6 +104,7 @@ namespace OrleanPG.Grains.GameGrain
                 Map = map,
             };
             await _gameState.WriteStateAsync();
+            await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
 
             return new GameStatusDto(status, map);
         }
@@ -172,9 +177,52 @@ namespace OrleanPG.Grains.GameGrain
             return stepMarker ? GameState.OTurn : GameState.XTurn;
         }
 
-        public Task<GameMap> GetMapAsync()
+        public Task<GameMap> GetMapAsync() => Task.FromResult(_gameState.State.Map);
+
+        public async Task ReceiveReminder(string reminderName, TickStatus status)
         {
-            return Task.FromResult(_gameState.State.Map);
+            switch (reminderName)
+            {
+                case TimeoutCheckReminderName:
+                    await CheckTimeout();
+                    break;
+            }
         }
+
+        private async Task CheckTimeout()
+        {
+            switch (_gameState.State.Status)
+            {
+                case GameState.XWin:
+                case GameState.OWin:
+                case GameState.TimedOut:
+                    break;
+                case GameState.OTurn:
+                case GameState.XTurn:
+                    _gameState.State = _gameState.State with { Status = GameState.TimedOut };
+                    await _gameState.WriteStateAsync();
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+            var reminder = await GetReminder(TimeoutCheckReminderName);
+            await UnregisterReminder(reminder);
+        }
+
+        /// <summary>
+        /// NOTE: Required for unit tests
+        /// </summary>
+        public new virtual Task<IGrainReminder> GetReminder(string reminderName) => base.GetReminder(reminderName);
+
+        /// <summary>
+        /// NOTE: Required for unit tests
+        /// </summary>
+        public new virtual Task UnregisterReminder(IGrainReminder reminder) => base.UnregisterReminder(reminder);
+
+        /// <summary>
+        /// NOTE: Required for unit tests
+        /// </summary>
+        public new virtual Task<IGrainReminder> RegisterOrUpdateReminder(string reminderName, TimeSpan dueTime, TimeSpan period)
+            => base.RegisterOrUpdateReminder(reminderName, dueTime, period);
     }
 }

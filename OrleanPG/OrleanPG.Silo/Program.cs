@@ -6,14 +6,17 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using OrleanPG.Grains.GameLobbyGrain;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using OrleanPG.Grains.Interfaces;
+using Orleans.Reminders.AzureStorage;
 
 namespace OrleanPG.Silo
 {
     class Program
     {
+        /// <summary>
+        /// TODO: Unsecure, should be moved to configuration out of repository. Token should be revoked and replaced with new one.
+        /// </summary>
+        private const string ConnectionString = "DefaultEndpointsProtocol=https;AccountName=ticktactorstorage;AccountKey=fZ88n7XGOZiAMvvgKJawqQqqaHV47bNNfd3V3WckvJue0HezVu5VPWli4gi0IRWZ3wiMn0li5rIp5ArcmHHdrA==;EndpointSuffix=core.windows.net";
+
         public static async Task<int> Main(string[] args)
         {
             try
@@ -39,6 +42,7 @@ namespace OrleanPG.Silo
             // define the cluster configuration
             var builder = new SiloHostBuilder()
                 .UseLocalhostClustering()
+                .UseAzureTableReminderService(SetupConnectionString)
                 .AddAzureTableGrainStorage("game_states_store", SetupStore)
                 .AddAzureTableGrainStorage("user_states_store", SetupStore)
                 .AddAzureTableGrainStorage("game_state_store", SetupStore)
@@ -60,10 +64,16 @@ namespace OrleanPG.Silo
             return host;
         }
 
+        private static void SetupConnectionString(AzureTableReminderStorageOptions options)
+        {
+            options.ConnectionString = ConnectionString;
+
+        }
+
         private static void SetupStore(AzureTableStorageOptions options)
         {
             options.UseJson = true;
-            options.ConnectionString = "DefaultEndpointsProtocol=https;AccountName=ticktactorstorage;AccountKey=fZ88n7XGOZiAMvvgKJawqQqqaHV47bNNfd3V3WckvJue0HezVu5VPWli4gi0IRWZ3wiMn0li5rIp5ArcmHHdrA==;EndpointSuffix=core.windows.net";
+            options.ConnectionString = ConnectionString;
         }
     }
 }

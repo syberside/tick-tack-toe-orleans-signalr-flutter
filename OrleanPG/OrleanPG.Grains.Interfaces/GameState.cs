@@ -6,5 +6,6 @@
         OTurn = 2,
         XWin = 3,
         OWin = 4,
+        TimedOut = 5,
     }
 }

@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Grains", "OrleanPG
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Grains.Interfaces", "OrleanPG.Grains.Interfaces\OrleanPG.Grains.Interfaces.csproj", "{BF7FB010-10D6-4B2F-B448-3A95F9805FAB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrleanPG.Grains.UnitTests", "OrleanPG.Grains.UnitTests\OrleanPG.Grains.UnitTests.csproj", "{0B14DB80-46C3-4E13-988A-76DCC17990C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Grains.UnitTests", "OrleanPG.Grains.UnitTests\OrleanPG.Grains.UnitTests.csproj", "{0B14DB80-46C3-4E13-988A-76DCC17990C7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignalR_PG.WebAPI", "SignalR_PG.WebAPI\SignalR_PG.WebAPI.csproj", "{101A8CE1-AF2E-4F81-97B5-EE234837025C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{0B14DB80-46C3-4E13-988A-76DCC17990C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0B14DB80-46C3-4E13-988A-76DCC17990C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0B14DB80-46C3-4E13-988A-76DCC17990C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{101A8CE1-AF2E-4F81-97B5-EE234837025C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{101A8CE1-AF2E-4F81-97B5-EE234837025C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{101A8CE1-AF2E-4F81-97B5-EE234837025C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{101A8CE1-AF2E-4F81-97B5-EE234837025C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -9,10 +9,9 @@ namespace OrleanPG.Grains.Interfaces
         Task<GameStatusDto> TurnAsync(int x, int y, AuthorizationToken player);
 
         Task<GameMap> GetMapAsync();
-    }
 
-    public interface IGameInitializer : IRemindable, IGrainWithGuidKey
-    {
-        Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO);
+        Task<GameStatusDto> SubscribeToUpdatesOrMarkAlive(IGameObserver observer);
+
+        Task UnsubscribeFromUpdates(IGameObserver observer);
     }
 }

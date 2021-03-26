@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using OrleanPG.Grains.Interfaces;
+﻿using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Runtime;
 using System;
@@ -10,6 +9,10 @@ namespace OrleanPG.Grains.GameGrain
     public class Game : Grain, IGame, IGameInitializer
     {
         private readonly IPersistentState<GameStorageData> _gameState;
+        /// <summary>
+        /// TODO: Inject and cover with tests related code
+        /// </summary>
+        private readonly SubscriptionManager<IGameObserver> _gameObservers = new SubscriptionManager<IGameObserver>(() => DateTime.Now);
 
         public const string TimeoutCheckReminderName = "timeout_check";
         public static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
@@ -105,8 +108,9 @@ namespace OrleanPG.Grains.GameGrain
             };
             await _gameState.WriteStateAsync();
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
+            NotifyObservers();
 
-            return new GameStatusDto(status, map);
+            return GetGameStatusDtoFromGameState();
         }
 
         private GameState GetNewStatus(bool stepMarker, int x, int y, GameMap gameMap)
@@ -224,5 +228,27 @@ namespace OrleanPG.Grains.GameGrain
         /// </summary>
         public new virtual Task<IGrainReminder> RegisterOrUpdateReminder(string reminderName, TimeSpan dueTime, TimeSpan period)
             => base.RegisterOrUpdateReminder(reminderName, dueTime, period);
+
+        public Task<GameStatusDto> SubscribeToUpdatesOrMarkAlive(IGameObserver observer)
+        {
+            _gameObservers.SubscribeOrMarkAlive(observer);
+            return Task.FromResult(GetGameStatusDtoFromGameState());
+        }
+
+        private GameStatusDto GetGameStatusDtoFromGameState() => new GameStatusDto(_gameState.State.Status, _gameState.State.Map);
+
+        public Task UnsubscribeFromUpdates(IGameObserver observer)
+        {
+            _gameObservers.Unsubscribe(observer);
+            return Task.CompletedTask;
+        }
+
+        private void NotifyObservers()
+        {
+            foreach (var subscription in _gameObservers.Subscribers)
+            {
+                subscription.GameStateUpdated(GetGameStatusDtoFromGameState());
+            }
+        }
     }
 }

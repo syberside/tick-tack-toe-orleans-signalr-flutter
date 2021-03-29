@@ -1,4 +1,5 @@
-﻿using OrleanPG.Grains.Interfaces;
+﻿using OrleanPG.Grains.Infrastructure;
+using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Runtime;
 using System;
@@ -245,7 +246,7 @@ namespace OrleanPG.Grains.GameGrain
 
         private void NotifyObservers()
         {
-            foreach (var subscription in _gameObservers.Subscribers)
+            foreach (var subscription in _gameObservers.GetActualSubscribers)
             {
                 subscription.GameStateUpdated(GetGameStatusDtoFromGameState());
             }

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace OrleanPG.Grains
+namespace OrleanPG.Grains.Infrastructure
 {
     /// <summary>
     /// TODO: Cover with tests
@@ -24,7 +24,7 @@ namespace OrleanPG.Grains
 
         public void Unsubscribe(TSubscriber subscriber) => _subscribers.Remove(subscriber ?? throw new ArgumentNullException());
 
-        public IReadOnlyCollection<TSubscriber> Subscribers
+        public IReadOnlyCollection<TSubscriber> GetActualSubscribers
         {
             get
             {
@@ -32,6 +32,8 @@ namespace OrleanPG.Grains
                 return _subscribers.Keys.ToArray();
             }
         }
+
+        public IReadOnlyCollection<TSubscriber> GetAllSubscribers => _subscribers.Keys.ToArray();
 
         public void UnsubscribeExpired()
         {
@@ -41,6 +43,22 @@ namespace OrleanPG.Grains
             {
                 Unsubscribe(subscription);
             }
+        }
+
+        public DateTime GetExpirationTime(TSubscriber subscriber)
+        {
+            if (subscriber == null)
+            {
+                throw new ArgumentNullException();
+            }
+            if (!_subscribers.ContainsKey(subscriber))
+            {
+                throw new ArgumentException();
+            }
+
+            var addedTime = _subscribers[subscriber];
+            var deadline = addedTime + ExpirationTimeOut;
+            return deadline;
         }
     }
 }

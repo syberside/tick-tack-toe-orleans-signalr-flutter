@@ -83,7 +83,7 @@ namespace OrleanPG.Client
             var game = clusterClient.GetGrain<IGame>(id.Value);
             var observer = new GameObserver();
             var reference = await clusterClient.CreateObjectReference<IGameObserver>(observer);
-            await game.SubscribeToUpdatesOrMarkAlive(reference);
+            await game.SubscribeAndMarkAlive(reference);
             var status = GameState.XTurn;
             while (true)
             {
@@ -111,7 +111,7 @@ namespace OrleanPG.Client
                 var x = int.Parse(input[0]);
                 var y = int.Parse(input[1]);
                 var state = await game.TurnAsync(x, y, token);
-                await game.SubscribeToUpdatesOrMarkAlive(reference);
+                await game.SubscribeAndMarkAlive(reference);
                 Console.WriteLine(state.GameMap.ToMapString(" | ", " ", "X", "O"));
                 status = state.Status;
             }

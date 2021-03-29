@@ -6,7 +6,7 @@ namespace OrleanPG.Grains.Interfaces
     {
         Task<GameStatusDto> GetStatus();
 
-        Task<GameStatusDto> SubscribeToUpdatesOrMarkAlive(IGameObserver observer);
+        Task<GameStatusDto> SubscribeAndMarkAlive(IGameObserver observer);
 
         Task UnsubscribeFromUpdates(IGameObserver observer);
     }

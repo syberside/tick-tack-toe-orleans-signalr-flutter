@@ -29,6 +29,22 @@ namespace OrleanPG.Grains.GameGrain
             _gameObservers = gameObservers;
         }
 
+        private async Task UpdateState(GameStorageData data)
+        {
+            _gameState.State = data;
+            await _gameState.WriteStateAsync();
+            NotifyObservers();
+        }
+
+        private void NotifyObservers()
+        {
+            var update = GetGameStatusDtoFromGameState();
+            foreach (var subscription in _gameObservers.GetActualSubscribers)
+            {
+                subscription.GameStateUpdated(update);
+            }
+        }
+
         public async Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)
         {
             if (playerX == null)
@@ -47,8 +63,7 @@ namespace OrleanPG.Grains.GameGrain
             {
                 throw new InvalidOperationException();
             }
-            _gameState.State = _gameState.State with { XPlayer = playerX, OPlayer = playerO };
-            await _gameState.WriteStateAsync();
+            await UpdateState(_gameState.State with { XPlayer = playerX, OPlayer = playerO });
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
         }
 
@@ -103,14 +118,12 @@ namespace OrleanPG.Grains.GameGrain
             map[x, y] = stepMarker;
             var status = GetNewStatus(stepMarker, x, y, map);
 
-            _gameState.State = _gameState.State with
+            await UpdateState(_gameState.State with
             {
                 Status = status,
                 Map = map,
-            };
-            await _gameState.WriteStateAsync();
+            });
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
-            NotifyObservers();
 
             return GetGameStatusDtoFromGameState();
         }
@@ -205,8 +218,7 @@ namespace OrleanPG.Grains.GameGrain
                     break;
                 case GameState.OTurn:
                 case GameState.XTurn:
-                    _gameState.State = _gameState.State with { Status = GameState.TimedOut };
-                    await _gameState.WriteStateAsync();
+                    await UpdateState(_gameState.State with { Status = GameState.TimedOut });
                     break;
                 default:
                     throw new NotImplementedException();
@@ -231,7 +243,7 @@ namespace OrleanPG.Grains.GameGrain
         public new virtual Task<IGrainReminder> RegisterOrUpdateReminder(string reminderName, TimeSpan dueTime, TimeSpan period)
             => base.RegisterOrUpdateReminder(reminderName, dueTime, period);
 
-        public Task<GameStatusDto> SubscribeToUpdatesOrMarkAlive(IGameObserver observer)
+        public Task<GameStatusDto> SubscribeAndMarkAlive(IGameObserver observer)
         {
             _gameObservers.SubscribeOrMarkAlive(observer);
             return Task.FromResult(GetGameStatusDtoFromGameState());
@@ -243,14 +255,6 @@ namespace OrleanPG.Grains.GameGrain
         {
             _gameObservers.Unsubscribe(observer);
             return Task.CompletedTask;
-        }
-
-        private void NotifyObservers()
-        {
-            foreach (var subscription in _gameObservers.GetActualSubscribers)
-            {
-                subscription.GameStateUpdated(GetGameStatusDtoFromGameState());
-            }
         }
     }
 }

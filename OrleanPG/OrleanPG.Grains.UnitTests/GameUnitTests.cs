@@ -42,6 +42,17 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
+        public async Task StartAsync_OnSuccess_NotifySubscribers(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        {
+            var subscriber = new Mock<IGameObserver>();
+            _subscriptionManagerMock.Setup(x => x.GetActualSubscribers).Returns(new[] { subscriber.Object });
+
+            await _game.StartAsync(tokenX, tokenO);
+
+            subscriber.Verify(x => x.GameStateUpdated(new GameStatusDto()), Times.Once);
+        }
+
+        [Theory, AutoData]
         public async Task StartAsync_OnInitialized_Throws(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             await _game.StartAsync(tokenX, tokenO);
@@ -263,6 +274,24 @@ namespace OrleanPG.Grains.UnitTests
 
             _mockedGame.Verify(x => x.RegisterOrUpdateReminder(Game.TimeoutCheckReminderName, Game.TimeoutPeriod, Game.TimeoutPeriod));
         }
+
+        [Theory, AutoData]
+        public async Task TurnAsync_OnValidTurn_NotifySubsribers(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        {
+            var subscriber = new Mock<IGameObserver>();
+            _subscriptionManagerMock.Setup(x => x.GetActualSubscribers).Returns(new[] { subscriber.Object });
+            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
+
+            await _game.TurnAsync(0, 0, tokenX);
+
+            var gameMap = new bool?[,]
+            {
+                {true,  null, null, },
+                {null, null, null, },
+                {null,  null, null, },
+            };
+            subscriber.Verify(x => x.GameStateUpdated(new GameStatusDto(GameState.OTurn, new GameMap(gameMap))), Times.Once);
+        }
         #endregion
 
         #region
@@ -313,7 +342,20 @@ namespace OrleanPG.Grains.UnitTests
             _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
         }
 
-        //TODO: Test for reminder update on each turn
+        [Theory]
+        [InlineAutoData(GameState.OTurn)]
+        [InlineAutoData(GameState.XTurn)]
+        public async Task ReceiveReminder_OnGameNotInEndState_NotifyObservers(GameState gameState)
+        {
+            var subscriber = new Mock<IGameObserver>();
+            _subscriptionManagerMock.Setup(x => x.GetActualSubscribers).Returns(new[] { subscriber.Object });
+            var _game = _mockedGame.Object;
+            _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
+
+            await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
+
+            subscriber.Verify(x => x.GameStateUpdated(new GameStatusDto(GameState.TimedOut, new GameMap())), Times.Once);
+        }
         #endregion
     }
 }

@@ -5,9 +5,6 @@ using System.Linq;
 
 namespace OrleanPG.Grains.Infrastructure
 {
-    /// <summary>
-    /// TODO: Cover with tests
-    /// </summary>
     public class SubscriptionManager<TSubscriber> where TSubscriber : IAddressable
     {
         private readonly Dictionary<TSubscriber, DateTime> _subscribers = new();

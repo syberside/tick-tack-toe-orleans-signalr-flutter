@@ -183,7 +183,7 @@ namespace OrleanPG.Grains.GameGrain
             return stepMarker ? GameState.OTurn : GameState.XTurn;
         }
 
-        public Task<GameMap> GetMapAsync() => Task.FromResult(_gameState.State.Map);
+        public Task<GameStatusDto> GetStatus() => Task.FromResult(GetGameStatusDtoFromGameState());
 
         public async Task ReceiveReminder(string reminderName, TickStatus status)
         {

@@ -8,7 +8,7 @@ namespace OrleanPG.Grains.Interfaces
     {
         Task<GameStatusDto> TurnAsync(int x, int y, AuthorizationToken player);
 
-        Task<GameMap> GetMapAsync();
+        Task<GameStatusDto> GetStatus();
 
         Task<GameStatusDto> SubscribeToUpdatesOrMarkAlive(IGameObserver observer);
 

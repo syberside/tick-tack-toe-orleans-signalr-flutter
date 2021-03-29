@@ -49,9 +49,9 @@ namespace OrleanPG.Client
             var games = await ListGamesAsync(lobby);
             foreach (var game in games)
             {
-                var gameMap = await GetGameMap(clusterClient, game.Id);
+                var gameMap = await GetGameStatus(clusterClient, game.Id);
                 Console.WriteLine($"Game status for {game.Id}");
-                Console.WriteLine(gameMap.ToMapString(" | ", " ", "X", "O"));
+                Console.WriteLine(gameMap.GameMap.ToMapString(" | ", " ", "X", "O"));
                 Console.WriteLine();
             }
 
@@ -71,10 +71,10 @@ namespace OrleanPG.Client
             await PlayAsync(clusterClient, token1, token2, gameId);
         }
 
-        private static async Task<GameMap> GetGameMap(IClusterClient clusterClient, GameId id)
+        private static async Task<GameStatusDto> GetGameStatus(IClusterClient clusterClient, GameId id)
         {
             var game = clusterClient.GetGrain<IGame>(id.Value);
-            var data = await game.GetMapAsync();
+            var data = await game.GetStatus();
             return data;
         }
 

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrleanPG.Grains.GameLobbyGrain;
 using Orleans.Reminders.AzureStorage;
 using OrleanPG.Grains.Infrastructure;
+using OrleanPG.Grains.Interfaces;
 
 namespace OrleanPG.Silo
 {
@@ -58,7 +59,7 @@ namespace OrleanPG.Silo
                 })
                 .ConfigureApplicationParts(parts => parts
                     .AddApplicationPart(typeof(GameLobby).Assembly).WithReferences())
-                .ConfigureServices(s => s.AddTransient(typeof(ISubscriptionManager<>), typeof(SubscriptionManager<>)));
+                .ConfigureServices(s => s.AddTransient<ISubscriptionManager<IGameObserver>>((sp) => new SubscriptionManager<IGameObserver>(() => DateTime.Now)));
 
 
             var host = builder.Build();

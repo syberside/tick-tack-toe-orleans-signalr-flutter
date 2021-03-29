@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace OrleanPG.Grains.Infrastructure
 {
-    public class SubscriptionManager<TSubscriber> where TSubscriber : IAddressable
+    public class SubscriptionManager<TSubscriber> : ISubscriptionManager<TSubscriber> where TSubscriber : IAddressable
     {
         private readonly Dictionary<TSubscriber, DateTime> _subscribers = new();
         private readonly Func<DateTime> _dateTimeProvider;

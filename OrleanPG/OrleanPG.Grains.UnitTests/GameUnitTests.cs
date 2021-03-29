@@ -3,6 +3,7 @@ using FluentAssertions;
 using Moq;
 using OrleanPG.Grains.GameGrain;
 using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
+using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
 using Orleans.Runtime;
 using System;
@@ -14,13 +15,17 @@ namespace OrleanPG.Grains.UnitTests
     public class GameUnitTests
     {
         private readonly Mock<IPersistentState<GameStorageData>> _storeMock;
+        private readonly Mock<ISubscriptionManager<IGameObserver>> _subscriptionManagerMock;
         private readonly Mock<Game> _mockedGame;
         private readonly Game _game;
+
 
         public GameUnitTests()
         {
             _storeMock = PersistanceHelper.CreateAndSetupStateWriteMock<GameStorageData>();
-            _mockedGame = new Mock<Game>(() => new Game(_storeMock.Object));
+            _subscriptionManagerMock = new();
+            _subscriptionManagerMock.Setup(x => x.GetActualSubscribers).Returns(new IGameObserver[0]);
+            _mockedGame = new Mock<Game>(() => new Game(_storeMock.Object, _subscriptionManagerMock.Object));
             // suppress base RegisterOrUpdateReminder calls
             _mockedGame.Setup(x => x.RegisterOrUpdateReminder(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>())).ReturnsAsync((IGrainReminder)null);
             _game = _mockedGame.Object;

@@ -13,7 +13,7 @@ namespace OrleanPG.Grains.GameGrain
         /// <summary>
         /// TODO: Inject and cover with tests related code
         /// </summary>
-        private readonly SubscriptionManager<IGameObserver> _gameObservers = new SubscriptionManager<IGameObserver>(() => DateTime.Now);
+        private readonly ISubscriptionManager<IGameObserver> _gameObservers;
 
         public const string TimeoutCheckReminderName = "timeout_check";
         public static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
@@ -22,10 +22,11 @@ namespace OrleanPG.Grains.GameGrain
 
 
         public Game(
-            [PersistentState("game_game_state", "game_state_store")] IPersistentState<GameStorageData> gameState
-            )
+            [PersistentState("game_game_state", "game_state_store")] IPersistentState<GameStorageData> gameState,
+            ISubscriptionManager<IGameObserver> gameObservers)
         {
             _gameState = gameState;
+            _gameObservers = gameObservers;
         }
 
         public async Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)

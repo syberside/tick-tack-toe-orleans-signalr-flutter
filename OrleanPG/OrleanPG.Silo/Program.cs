@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using OrleanPG.Grains.GameLobbyGrain;
 using Orleans.Reminders.AzureStorage;
+using OrleanPG.Grains.Infrastructure;
 
 namespace OrleanPG.Silo
 {
@@ -56,7 +57,8 @@ namespace OrleanPG.Silo
                     logging.AddConsole();
                 })
                 .ConfigureApplicationParts(parts => parts
-                    .AddApplicationPart(typeof(GameLobby).Assembly).WithReferences());
+                    .AddApplicationPart(typeof(GameLobby).Assembly).WithReferences())
+                .ConfigureServices(s => s.AddTransient(typeof(ISubscriptionManager<>), typeof(SubscriptionManager<>)));
 
 
             var host = builder.Build();

@@ -7,24 +7,24 @@ namespace OrleanPG.Grains.Interfaces
     {
         public const int GameSize = 3;
 
-        public bool?[,] Data { get; init; }
+        public CellStatus[,] Data { get; init; }
 
-        public GameMap(bool?[,] data)
+        public GameMap(CellStatus[,] data)
         {
             Data = data;
         }
 
-        public GameMap() : this(new bool?[GameSize, GameSize]) { }
+        public GameMap() : this(new CellStatus[GameSize, GameSize]) { }
 
-        public GameMap Clone() => new((bool?[,])Data.Clone());
+        public GameMap Clone() => new((CellStatus[,])Data.Clone());
 
-        public bool? this[int x, int y]
+        public CellStatus this[int x, int y]
         {
             get => Data[x, y];
             set => Data[x, y] = value;
         }
 
-        public string ToMapString(string separator = " , ", string nullValue = "null", string xValue = "true", string oValue = "false")
+        public string ToMapString(string separator = " | ", string emptyValue = " ", string xValue = "X", string oValue = "O")
         {
             var sb = new StringBuilder();
             for (var i = 0; i < Data.GetLength(0); i++)
@@ -32,7 +32,7 @@ namespace OrleanPG.Grains.Interfaces
                 var row = Enumerable.Range(0, Data.GetLength(0))
                  .Select(x => Data[i, x])
                  .ToArray();
-                sb.AppendLine($"{{{string.Join(separator, row.Select(x => x == null ? nullValue : x.Value ? xValue : oValue))}}}");
+                sb.AppendLine($"{{{string.Join(separator, row.Select(x => x == CellStatus.Empty ? emptyValue : x == CellStatus.X ? xValue : oValue))}}}");
             }
             return sb.ToString();
         }
@@ -46,5 +46,12 @@ namespace OrleanPG.Grains.Interfaces
         {
             return obj is GameMap map && map.ToString() == ToString();
         }
+    }
+
+    public enum CellStatus
+    {
+        Empty,
+        X,
+        O,
     }
 }

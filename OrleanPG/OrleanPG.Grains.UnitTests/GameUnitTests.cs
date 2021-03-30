@@ -125,7 +125,7 @@ namespace OrleanPG.Grains.UnitTests
         {
             x %= Game.GameSize;
             y %= Game.GameSize;
-            _storeMock.Object.State.Map[x, y] = true;
+            _storeMock.Object.State.Map[x, y] = CellStatus.X;
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
 
             Func<Task> act = async () => await _game.TurnAsync(x, y, tokenX);
@@ -141,7 +141,7 @@ namespace OrleanPG.Grains.UnitTests
             var status = await _game.TurnAsync(0, 0, tokenX);
 
             var gameMap = new GameMap();
-            gameMap[0, 0] = true;
+            gameMap[0, 0] = CellStatus.X;
             status.Should().Be(new GameStatusDto(GameState.OTurn, gameMap));
         }
 
@@ -153,7 +153,7 @@ namespace OrleanPG.Grains.UnitTests
             var status = await _game.TurnAsync(0, 0, tokenX);
 
             var gameMap = new GameMap();
-            gameMap[0, 0] = true;
+            gameMap[0, 0] = CellStatus.X;
             _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.OTurn, gameMap));
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Exactly(1));
         }
@@ -163,7 +163,7 @@ namespace OrleanPG.Grains.UnitTests
         public async Task TurnAsync_OnOTurn_ReturnsXTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
-            _storeMock.Object.State.Map[0, 0] = true;
+            _storeMock.Object.State.Map[0, 0] = CellStatus.X;
 
             var status = await _game.TurnAsync(0, 1, tokenO);
 
@@ -174,13 +174,13 @@ namespace OrleanPG.Grains.UnitTests
         public async Task TurnAsync_OnOTurn_StoresXTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
-            _storeMock.Object.State.Map[0, 0] = true;
+            _storeMock.Object.State.Map[0, 0] = CellStatus.X;
 
             var status = await _game.TurnAsync(0, 1, tokenO);
 
             var gameMap = new GameMap();
-            gameMap[0, 0] = true;
-            gameMap[0, 1] = false;
+            gameMap[0, 0] = CellStatus.X;
+            gameMap[0, 1] = CellStatus.O;
             _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.XTurn, gameMap));
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Exactly(1));
         }
@@ -188,11 +188,11 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task TurnAsync_OnWinByHorizontallLine_DetectsWin(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            var gameMap = new bool?[,]
+            var gameMap = new CellStatus[,]
             {
-                {true,  true, null, },
-                {false, false, null, },
-                {null,  null, null, },
+                {CellStatus.X,  CellStatus.X, CellStatus.Empty, },
+                {CellStatus.O, CellStatus.O, CellStatus.Empty, },
+                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
 
@@ -205,12 +205,12 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task TurnAsync_OnWinByVerticallLine_DetectsWin(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            var gameMap = new bool?[,]
-{
-                {true,  null, null, },
-                {true, null, null, },
-                {null,  null, null, },
-};
+            var gameMap = new CellStatus[,]
+            {
+                {CellStatus.X,  CellStatus.Empty, CellStatus.Empty, },
+                {CellStatus.X,  CellStatus.Empty, CellStatus.Empty, },
+                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
+            };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
 
             var status = await _game.TurnAsync(Game.GameSize - 1, 0, tokenX);
@@ -222,12 +222,12 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task TurnAsync_OnWinByDiagonal1Line_DetectsWin(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            var gameMap = new bool?[,]
-{
-                {true,  null, null, },
-                {null, true, null, },
-                {null,  null, null, },
-};
+            var gameMap = new CellStatus[,]
+            {
+                {CellStatus.X,  CellStatus.Empty, CellStatus.Empty, },
+                {CellStatus.Empty,  CellStatus.X, CellStatus.Empty, },
+                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
+            };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
 
             var status = await _game.TurnAsync(Game.GameSize - 1, Game.GameSize - 1, tokenX);
@@ -239,11 +239,11 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task TurnAsync_OnWinByDiagonal2Line_DetectsWin(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            var gameMap = new bool?[,]
+            var gameMap = new CellStatus[,]
             {
-                {null,  null, true, },
-                {null, true, null, },
-                {null,  null, null, },
+                {CellStatus.Empty,  CellStatus.Empty, CellStatus.X, },
+                {CellStatus.Empty,  CellStatus.X, CellStatus.Empty, },
+                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
 
@@ -284,11 +284,11 @@ namespace OrleanPG.Grains.UnitTests
 
             await _game.TurnAsync(0, 0, tokenX);
 
-            var gameMap = new bool?[,]
+            var gameMap = new CellStatus[,]
             {
-                {true,  null, null, },
-                {null, null, null, },
-                {null,  null, null, },
+                {CellStatus.X,  CellStatus.Empty, CellStatus.Empty, },
+                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
+                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
             subscriber.Verify(x => x.GameStateUpdated(new GameStatusDto(GameState.OTurn, new GameMap(gameMap))), Times.Once);
         }

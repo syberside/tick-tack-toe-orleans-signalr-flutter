@@ -82,12 +82,12 @@ namespace OrleanPG.Grains.GameGrain
             {
                 throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameSize}");
             }
-            if (_gameState.State.Map[x, y] != null)
+            if (_gameState.State.Map[x, y] != CellStatus.Empty)
             {
-                throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(_gameState.State.Map[x, y] == true ? "X" : "Y")}");
+                throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(_gameState.State.Map[x, y] == CellStatus.X ? "X" : "O")}");
             }
 
-            bool stepMarker;
+            CellStatus stepMarker = CellStatus.Empty;
             switch (_gameState.State.Status)
             {
                 case GameState.OWin:
@@ -98,14 +98,14 @@ namespace OrleanPG.Grains.GameGrain
                     {
                         throw new InvalidOperationException();
                     }
-                    stepMarker = true;
+                    stepMarker = CellStatus.X;
                     break;
                 case GameState.OTurn:
                     if (player != _gameState.State.OPlayer)
                     {
                         throw new InvalidOperationException();
                     }
-                    stepMarker = false;
+                    stepMarker = CellStatus.O;
                     break;
                 case GameState.TimedOut:
                     throw new InvalidOperationException();
@@ -128,18 +128,22 @@ namespace OrleanPG.Grains.GameGrain
             return GetGameStatusDtoFromGameState();
         }
 
-        private GameState GetNewStatus(bool stepMarker, int x, int y, GameMap gameMap)
+        private GameState GetNewStatus(CellStatus status, int x, int y, GameMap gameMap)
         {
+            if (status != CellStatus.O && status != CellStatus.X)
+            {
+                throw new ArgumentException();
+            }
             //check row
             for (var i = 0; i < GameSize; i++)
             {
-                if (gameMap[i, y] != stepMarker)
+                if (gameMap[i, y] != status)
                 {
                     break;
                 }
                 if (i == GameSize - 1)
                 {
-                    return stepMarker ? GameState.XWin : GameState.OWin;
+                    return StepToWinState(status);
 
                 }
             }
@@ -147,14 +151,13 @@ namespace OrleanPG.Grains.GameGrain
             //check col
             for (var i = 0; i < GameSize; i++)
             {
-                if (gameMap[x, i] != stepMarker)
+                if (gameMap[x, i] != status)
                 {
                     break;
                 }
                 if (i == GameSize - 1)
                 {
-                    return stepMarker ? GameState.XWin : GameState.OWin;
-
+                    return StepToWinState(status);
                 }
             }
 
@@ -163,14 +166,13 @@ namespace OrleanPG.Grains.GameGrain
             {
                 for (var i = 0; i < GameSize; i++)
                 {
-                    if (gameMap[i, i] != stepMarker)
+                    if (gameMap[i, i] != status)
                     {
                         break;
                     }
                     if (i == GameSize - 1)
                     {
-                        return stepMarker ? GameState.XWin : GameState.OWin;
-
+                        return StepToWinState(status);
                     }
                 }
             }
@@ -181,20 +183,24 @@ namespace OrleanPG.Grains.GameGrain
 
                 for (var i = 0; i < GameSize; i++)
                 {
-                    if (gameMap[GameSize - i - 1, i] != stepMarker)
+                    if (gameMap[GameSize - i - 1, i] != status)
                     {
                         break;
                     }
                     if (i == GameSize - 1)
                     {
-                        return stepMarker ? GameState.XWin : GameState.OWin;
+                        return StepToWinState(status);
 
                     }
                 }
             }
 
-            return stepMarker ? GameState.OTurn : GameState.XTurn;
+            return StepToNewStep(status);
         }
+
+        private static GameState StepToNewStep(CellStatus status) => status == CellStatus.X ? GameState.OTurn : GameState.XTurn;
+
+        private static GameState StepToWinState(CellStatus status) => status == CellStatus.X ? GameState.XWin : GameState.OWin;
 
         public Task<GameStatusDto> GetStatus() => Task.FromResult(GetGameStatusDtoFromGameState());
 

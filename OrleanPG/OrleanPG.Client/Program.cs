@@ -111,7 +111,7 @@ namespace OrleanPG.Client
                 var y = int.Parse(input[1]);
                 var state = await game.TurnAsync(x, y, token);
                 await game.SubscribeAndMarkAlive(reference);
-                Console.WriteLine(state.GameMap.ToMapString(" | ", " ", "X", "O"));
+                Console.WriteLine(state.GameMap.ToMapString(" | "));
                 status = state.Status;
             }
         }

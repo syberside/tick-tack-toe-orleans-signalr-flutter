@@ -23,11 +23,13 @@ Future<void> main() async {
 
   await connection.start();
 
-  connection.on('ReceiveMessage', (message) {
+  connection.on('GameUpdated', (message) {
+    print("RECEIVED");
     print(message.toString());
   });
 
-  await connection.invoke('SendMessage', args: ['Bob', 'Says hi!']);
+  await connection
+      .invoke('Watch', args: ['364b499d-4d63-497b-b41a-d21469ad65a8']);
 
   runApp(MyApp());
 }

@@ -22,5 +22,6 @@ namespace SignalR_PG.WebAPI
                 {
                     webBuilder.UseStartup<Startup>();
                 });
+
     }
 }

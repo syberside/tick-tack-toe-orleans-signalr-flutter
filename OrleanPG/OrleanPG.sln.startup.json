@@ -2,10 +2,23 @@
   "Version": 3,
   "ListAllProjects": true,
   "MultiProjectConfigurations": {
-    "Server + client": {
+    "Server + Console client": {
       "Projects": {
         "OrleanPG.Silo": {},
         "OrleanPG.Client": {}
+      }
+    },
+    "Server + API client": {
+      "Projects": {
+        "OrleanPG.Silo": {},
+        "SignalR_PG.WebAPI": {}
+      }
+    },
+    "Server + Clients": {
+      "Projects": {
+        "OrleanPG.Silo": {},
+        "OrleanPG.Client": {},
+        "SignalR_PG.WebAPI": {}
       }
     }
   }

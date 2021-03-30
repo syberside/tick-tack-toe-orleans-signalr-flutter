@@ -1,8 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using Orleans;
+using System.Threading.Tasks;
 
 namespace OrleanPG.Grains.Interfaces
 {
-    public interface IObservableGame
+    public interface IObservableGame : IGrainWithGuidKey
     {
         Task<GameStatusDto> GetStatus();
 

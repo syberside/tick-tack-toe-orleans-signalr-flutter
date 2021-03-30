@@ -4,7 +4,6 @@ using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Configuration;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -46,27 +45,27 @@ namespace OrleanPG.Client
         private static async Task DoClientWork(IClusterClient clusterClient)
         {
             var lobby = clusterClient.GetGrain<IGameLobby>(Guid.Empty);
-            var games = await ListGamesAsync(lobby);
-            foreach (var game in games)
-            {
-                var gameMap = await GetGameStatus(clusterClient, game.Id);
-                Console.WriteLine($"Game status for {game.Id}");
-                Console.WriteLine(gameMap.GameMap.ToMapString(" | ", " ", "X", "O"));
-                Console.WriteLine();
-            }
+            //var games = await ListGamesAsync(lobby);
+            //foreach (var game in games)
+            //{
+            //    var gameMap = await GetGameStatus(clusterClient, game.Id);
+            //    Console.WriteLine($"Game status for {game.Id}");
+            //    Console.WriteLine(gameMap.GameMap.ToMapString(" | ", " ", "X", "O"));
+            //    Console.WriteLine();
+            //}
 
             var token1 = await AuthorizeAsync(lobby, "1");
             var token2 = await AuthorizeAsync(lobby, "2");
 
             var gameId = await CreateGameAsync(lobby, token1, true);
-            await ListGamesAsync(lobby);
+            //await ListGamesAsync(lobby);
 
-            gameId = await CreateGameAsync(lobby, token2, false);
-            await ListGamesAsync(lobby);
+            //gameId = await CreateGameAsync(lobby, token2, false);
+            //await ListGamesAsync(lobby);
 
-            await EnterGameAsync(lobby, gameId, token1);
+            await EnterGameAsync(lobby, gameId, token2);
 
-            await ListGamesAsync(lobby);
+            //await ListGamesAsync(lobby);
 
             await PlayAsync(clusterClient, token1, token2, gameId);
         }

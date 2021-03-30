@@ -1,16 +1,14 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using SignalR_PG.WebAPI.Hubs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+
+using Orleans;
+using Orleans.Configuration;
+using Newtonsoft.Json.Serialization;
 
 namespace SignalR_PG.WebAPI
 {
@@ -27,7 +25,12 @@ namespace SignalR_PG.WebAPI
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            services.AddSignalR();
+            services
+                .AddSignalR()
+                .AddNewtonsoftJsonProtocol();
+            services.AddSingleton((sp) => CreateClient());
+            services.AddSingleton<IGrainFactory>((sp) => sp.GetRequiredService<IClusterClient>());
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -47,8 +50,25 @@ namespace SignalR_PG.WebAPI
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapHub<ChatHub>("/chatHub");
+                endpoints.MapHub<GamesHub>("/chatHub");
             });
+        }
+
+        public IClusterClient CreateClient()
+        {
+            var client = new ClientBuilder()
+                .UseLocalhostClustering()
+                .Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = "dev";
+                    options.ServiceId = "OrleansBasics";
+                })
+                .ConfigureLogging(logging => logging.AddConsole())
+                .Build();
+
+            //TODO: Make async
+            client.Connect().Wait();
+            return client;
         }
     }
 }

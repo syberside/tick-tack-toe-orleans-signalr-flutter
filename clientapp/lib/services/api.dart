@@ -63,4 +63,15 @@ class Api {
         .toList();
     return data;
   }
+
+  Future<String> createGame(String token, bool playForX) async {
+    if (_connection == null) {
+      throw Error();
+    }
+    var result = await _connection?.invoke("CreateGame", args: [
+      token,
+      playForX,
+    ]);
+    return result as String;
+  }
 }

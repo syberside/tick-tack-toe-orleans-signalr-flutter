@@ -45,6 +45,14 @@ namespace SignalR_PG.WebAPI.Hubs
             }).ToArray();
         }
 
+        public async Task<string> CreateGame(string authToken, bool playForX)
+        {
+            //TODO: add subscription to games list update
+            var lobbie = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
+            var result = await lobbie.CreateGameAsync(new AuthorizationToken(authToken), playForX);
+            return result.Value.ToString();
+        }
+
         public async Task Watch(Guid gameId)
         {
             var groupName = GetGroupName(gameId);

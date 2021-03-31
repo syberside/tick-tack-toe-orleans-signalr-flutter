@@ -75,7 +75,7 @@ class _GamePageState extends State<GamePage> {
   }
 
   Widget _statusWidget() {
-    switch (widget.data.generalInfo.status) {
+    switch (widget.data.status) {
       case GameStatus.XTurn:
         return widget.playForX == null
             ? Text("X turn")
@@ -110,17 +110,14 @@ class _GamePageState extends State<GamePage> {
   void _tap(int i, int j) {
     switch (widget.data.gameMap[i][j]) {
       case CellStatus.Empty:
-        if (widget.playForX! &&
-                widget.data.generalInfo.status == GameStatus.XTurn ||
-            !widget.playForX! &&
-                widget.data.generalInfo.status == GameStatus.OTurn) {
+        if (widget.playForX! && widget.data.status == GameStatus.XTurn ||
+            !widget.playForX! && widget.data.status == GameStatus.OTurn) {
           setState(() {
             widget.data.gameMap[i][j] =
                 widget.playForX! ? CellStatus.X : CellStatus.O;
-            widget.data.generalInfo.status =
-                widget.data.generalInfo.status == GameStatus.XTurn
-                    ? GameStatus.OTurn
-                    : GameStatus.XTurn;
+            widget.data.status = widget.data.status == GameStatus.XTurn
+                ? GameStatus.OTurn
+                : GameStatus.XTurn;
           });
           //TODO: call backend
         }

@@ -1,3 +1,4 @@
+import 'package:clientapp/models/auth_model.dart';
 import 'package:clientapp/models/games_list_model.dart';
 import 'package:clientapp/pages/game_page.dart';
 import 'package:clientapp/pages/waiting_in_game_page.dart';
@@ -17,14 +18,35 @@ class LobbiesPage extends StatelessWidget {
     return model.items.toList();
   }
 
-  void _createNew(BuildContext context) {
-    //TODO: Ask for X or O
-    //TODO: Call backend, get id, open game with parameter
-    Navigator.push(
-        context, MaterialPageRoute(builder: (_) => WaitingInGamePage()));
+  Future<void> _createNew(BuildContext context) async {
+    var playForX = await showDialog<bool?>(
+      builder: (BuildContext context) => SimpleDialog(
+        title: Text("Please choose your side"),
+        children: [
+          SimpleDialogOption(
+            child: Text("Play for X"),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+          SimpleDialogOption(
+            child: Text("Play for O"),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+        ],
+      ),
+      context: context,
+    );
+    if (playForX == null) {
+      return;
+    }
+    var api = context.read<Api>();
+    var token = context.read<AuthData>().authToken;
+    var gameId = await api.createGame(token!, playForX);
+    // TODO: Subscribe for game updates
+    // TODO: On update => reload in game mode
+    Navigator.push(context,
+        MaterialPageRoute(builder: (_) => WaitingInGamePage(gameId: gameId)));
   }
 
-  //TODO: Get games from backend, ping for games, update games on socket event
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(

@@ -23,8 +23,9 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = true);
     var api = context.read<Api>();
     await api.connect();
-    var authCode = await api.login(_inputCtrl.text);
-    context.read<AuthData>().storeToken(authCode);
+    var username = _inputCtrl.text;
+    var authCode = await api.login(username);
+    context.read<AuthData>().update(authCode, username);
     // TODO: handle errors and timeouts
     Navigator.pushReplacement(
       context,

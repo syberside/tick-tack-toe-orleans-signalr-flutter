@@ -57,8 +57,8 @@ class Api {
     var data = items
         .map((x) => GameGeneralInfo(
               x["gameId"] as String,
-              x["playerX"] as String,
-              x["playerO"] as String,
+              x["playerX"] is String ? x["playerX"] as String : null,
+              x["playerO"] is String ? x["playerO"] as String : null,
             ))
         .toList();
     return data;

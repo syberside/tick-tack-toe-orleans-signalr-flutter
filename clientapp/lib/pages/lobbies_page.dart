@@ -1,7 +1,7 @@
 import 'package:clientapp/models/auth_model.dart';
+import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/models/games_list_model.dart';
 import 'package:clientapp/pages/game_page.dart';
-import 'package:clientapp/pages/waiting_in_game_page.dart';
 import 'package:clientapp/services/api.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -42,9 +42,20 @@ class LobbiesPage extends StatelessWidget {
     var token = context.read<AuthData>().authToken;
     var gameId = await api.createGame(token!, playForX);
     // TODO: Subscribe for game updates
-    // TODO: On update => reload in game mode
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => WaitingInGamePage(gameId: gameId)));
+    // TODO: On update begin game
+    // TODO: optimistic update for lobbies list
+    var username = context.read<AuthData>().username;
+    var gameData = GameData.createdByUser(username!, playForX, gameId);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GamePage(
+            data: gameData,
+            mode: playForX
+                ? UserGameParticipation.playForX
+                : UserGameParticipation.playForY),
+      ),
+    );
   }
 
   @override
@@ -137,7 +148,7 @@ class LobbieWidget extends StatelessWidget {
         MaterialPageRoute(
             builder: (_) => GamePage(
                   data: data,
-                  playForX: true,
+                  mode: UserGameParticipation.playForX,
                 )));
   }
 
@@ -153,13 +164,14 @@ class LobbieWidget extends StatelessWidget {
         MaterialPageRoute(
             builder: (_) => GamePage(
                   data: data,
-                  playForX: null,
+                  mode: UserGameParticipation.readOnly,
                 )));
   }
 }
 
 class GameGeneralInfo {
   bool get canParticipate => playerO == null || playerX == null;
+  bool get isFilledWithPlayers => !canParticipate;
 
   String? playerX;
   String? playerO;
@@ -188,4 +200,18 @@ class GameData {
   GameStatus status;
 
   GameData(this.gameMap, this.generalInfo, this.status);
+
+  GameData.createdByUser(String username, bool playForX, String gameId)
+      : this(
+            [
+              [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
+              [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
+              [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
+            ],
+            GameGeneralInfo(
+              gameId,
+              playForX ? username : null,
+              playForX ? null : username,
+            ),
+            GameStatus.XTurn);
 }

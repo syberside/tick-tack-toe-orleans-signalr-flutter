@@ -1,39 +1,24 @@
+import 'package:clientapp/models/auth_model.dart';
+import 'package:clientapp/models/games_list_model.dart';
+import 'package:clientapp/pages/login_page.dart';
+import 'package:clientapp/services/api.dart';
 import 'package:flutter/material.dart';
-
-import 'pages/login_page.dart';
-//import 'package:http/io_client.dart';
-//import 'package:signalr_core/signalr_core.dart';
-//import 'dart:io';
-//import 'dart:io' show Platform;
-//import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
-  // final host = kIsWeb
-  //     ? 'localhost'
-  //     : Platform.isAndroid
-  //         ? '10.0.2.2'
-  //         : 'localhost';
-  // final connection = HubConnectionBuilder()
-  //     .withUrl(
-  //         'http://$host:5000/chatHub',
-  //         HttpConnectionOptions(
-  //           client: IOClient(
-  //               HttpClient()..badCertificateCallback = (x, y, z) => true),
-  //           logging: (level, message) => print(message),
-  //         ))
-  //     .build();
-
-  // await connection.start();
-
-  // connection.on('GameUpdated', (message) {
-  //   print("RECEIVED");
-  //   print(message.toString());
-  // });
-
-  // await connection
-  //     .invoke('Watch', args: ['364b499d-4d63-497b-b41a-d21469ad65a8']);
-
-  runApp(MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<Api>(
+          create: (context) => Api(),
+          dispose: (context, api) => api.disconnect(),
+        ),
+        ChangeNotifierProvider<AuthData>(create: (_) => AuthData()),
+        ChangeNotifierProvider<GamesListModel>(create: (_) => GamesListModel())
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

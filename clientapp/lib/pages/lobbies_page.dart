@@ -1,16 +1,21 @@
+import 'package:clientapp/models/games_list_model.dart';
 import 'package:clientapp/pages/game_page.dart';
 import 'package:clientapp/pages/waiting_in_game_page.dart';
+import 'package:clientapp/services/api.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class LobbiesPage extends StatelessWidget {
   final ScrollController _scrollCtrl = ScrollController();
-  final List<GameGeneralInfo> _data = [
-    GameGeneralInfo("1", "player X", null, GameStatus.Timeout),
-    GameGeneralInfo("2", null, "player O", GameStatus.XTurn),
-    GameGeneralInfo("3", "player X", null, GameStatus.Timeout),
-    GameGeneralInfo("4", "player x", "player o", GameStatus.OWin),
-  ];
+
+  Future<List<GameGeneralInfo>>? _loadData(BuildContext context) async {
+    var api = context.read<Api>();
+    var result = await api.getLobbies();
+    var model = context.read<GamesListModel>();
+    model.replace(result);
+    return model.items.toList();
+  }
 
   void _createNew(BuildContext context) {
     //TODO: Ask for X or O
@@ -31,21 +36,33 @@ class LobbiesPage extends StatelessWidget {
               child: Text("Create new game"),
               onPressed: () => _createNew(context),
             ),
-            Expanded(
-              child: ListView.separated(
-                  controller: _scrollCtrl,
-                  padding: const EdgeInsets.all(8),
-                  itemCount: _data.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return Container(
-                      height: 50,
-                      child: Center(child: LobbieWidget(data: _data[index])),
-                    );
-                  },
-                  separatorBuilder: (_, int index) => const Divider()),
-            ),
+            context.watch<GamesListModel>().isLoaded
+                ? _buildListWidget(
+                    context.read<GamesListModel>().items.toList())
+                : FutureBuilder<List<GameGeneralInfo>>(
+                    future: _loadData(context),
+                    builder: (context, snapshot) =>
+                        snapshot.connectionState == ConnectionState.done &&
+                                snapshot.hasData
+                            ? _buildListWidget(snapshot.data!)
+                            : Center(child: CircularProgressIndicator()),
+                  ),
           ],
         ),
+      );
+
+  Expanded _buildListWidget(List<GameGeneralInfo> data) => Expanded(
+        child: ListView.separated(
+            controller: _scrollCtrl,
+            padding: const EdgeInsets.all(8),
+            itemCount: data.length,
+            itemBuilder: (BuildContext context, int index) {
+              return Container(
+                height: 50,
+                child: Center(child: LobbieWidget(data: data[index])),
+              );
+            },
+            separatorBuilder: (_, int index) => const Divider()),
       );
 }
 
@@ -91,7 +108,7 @@ class LobbieWidget extends StatelessWidget {
       [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
       [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
       [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-    ], GameGeneralInfo("10", "x1", "o2", GameStatus.XTurn));
+    ], GameGeneralInfo("10", "x1", "o2"), GameStatus.XTurn);
     //TODO: Call backend to join game, subscribe to updates
     Navigator.push(
         context,
@@ -107,7 +124,7 @@ class LobbieWidget extends StatelessWidget {
       [CellStatus.X, CellStatus.Empty, CellStatus.O],
       [CellStatus.Empty, CellStatus.X, CellStatus.O],
       [CellStatus.Empty, CellStatus.Empty, CellStatus.X],
-    ], GameGeneralInfo("10", "x1", "o2", GameStatus.XWin));
+    ], GameGeneralInfo("10", "x1", "o2"), GameStatus.XWin);
     //TODO: Call backend to get data, subscribe to updates
     Navigator.push(
         context,
@@ -125,9 +142,8 @@ class GameGeneralInfo {
   String? playerX;
   String? playerO;
   String gameId;
-  GameStatus status;
 
-  GameGeneralInfo(this.gameId, this.playerX, this.playerO, this.status);
+  GameGeneralInfo(this.gameId, this.playerX, this.playerO);
 }
 
 enum GameStatus {
@@ -147,6 +163,7 @@ enum CellStatus {
 class GameData {
   List<List<CellStatus>> gameMap;
   GameGeneralInfo generalInfo;
+  GameStatus status;
 
-  GameData(this.gameMap, this.generalInfo);
+  GameData(this.gameMap, this.generalInfo, this.status);
 }

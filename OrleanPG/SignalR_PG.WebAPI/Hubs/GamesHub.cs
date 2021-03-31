@@ -4,6 +4,7 @@ using Orleans;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SignalR_PG.WebAPI.Hubs
@@ -16,6 +17,32 @@ namespace SignalR_PG.WebAPI.Hubs
         public GamesHub(IClusterClient clusterClient)
         {
             _clusterClient = clusterClient;
+        }
+
+        public async Task<string> Login(string username)
+        {
+            var lobbie = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
+            var result = await lobbie.AuthorizeAsync(username);
+            return result.Value;
+        }
+
+        public async Task<GameGeneralInfoDto[]> GetLobbies()
+        {
+            //TODO: add subscription to games list update
+            var lobbie = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
+            var result = await lobbie.FindGamesAsync();
+            return Convert(result);
+
+        }
+
+        private GameGeneralInfoDto[] Convert(GameListItemDto[] result)
+        {
+            return result.Select(x => new GameGeneralInfoDto
+            {
+                playerX = x.XPlayerName,
+                playerO = x.OPlayerName,
+                gameId = x.Id.Value.ToString(),
+            }).ToArray();
         }
 
         public async Task Watch(Guid gameId)
@@ -65,5 +92,21 @@ namespace SignalR_PG.WebAPI.Hubs
         {
             await _clientProxy.SendAsync("GameUpdated", newState);
         }
+    }
+
+    public class GameGeneralInfoDto
+    {
+        public string? playerX { get; set; }
+        public string? playerO { get; set; }
+        public string gameId { get; set; }
+    }
+
+    public enum GameDtoStatus
+    {
+        XTurn,
+        OTurn,
+        XWin,
+        OWin,
+        Timeout,
     }
 }

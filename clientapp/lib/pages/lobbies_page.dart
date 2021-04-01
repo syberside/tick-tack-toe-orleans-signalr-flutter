@@ -44,16 +44,15 @@ class LobbiesPage extends StatelessWidget {
     // TODO: Subscribe for game updates
     // TODO: On update begin game
     // TODO: optimistic update for lobbies list
+    await api.subscribeForChanges(gameId);
     var username = context.read<AuthData>().username;
     var gameData = GameData.createdByUser(username!, playForX, gameId);
+    var currentGameModel = context.read<CurrentGameModel>();
+    currentGameModel.newGameCreated(gameData, playForX);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GamePage(
-            data: gameData,
-            mode: playForX
-                ? UserGameParticipation.playForX
-                : UserGameParticipation.playForY),
+        builder: (_) => GamePage(),
       ),
     );
   }
@@ -142,14 +141,10 @@ class LobbieWidget extends StatelessWidget {
       [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
       [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
     ], GameGeneralInfo("10", "x1", "o2"), GameStatus.XTurn);
-    //TODO: Call backend to join game, subscribe to updates
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => GamePage(
-                  data: data,
-                  mode: UserGameParticipation.playForX,
-                )));
+    var currentGameMode = context.read<CurrentGameModel>();
+    //TODO: call backend to join, use result to understand X or U
+    currentGameMode.join(data, UserGameParticipation.playForX);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => GamePage()));
   }
 
   void _viewGame(BuildContext context, GameGeneralInfo data) {
@@ -159,13 +154,9 @@ class LobbieWidget extends StatelessWidget {
       [CellStatus.Empty, CellStatus.Empty, CellStatus.X],
     ], GameGeneralInfo("10", "x1", "o2"), GameStatus.XWin);
     //TODO: Call backend to get data, subscribe to updates
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => GamePage(
-                  data: data,
-                  mode: UserGameParticipation.readOnly,
-                )));
+    var currentGameModel = context.read<CurrentGameModel>();
+    currentGameModel.view(data);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => GamePage()));
   }
 }
 
@@ -203,15 +194,17 @@ class GameData {
 
   GameData.createdByUser(String username, bool playForX, String gameId)
       : this(
-            [
-              [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-              [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-              [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-            ],
+            createEmptyMap(),
             GameGeneralInfo(
               gameId,
               playForX ? username : null,
               playForX ? null : username,
             ),
             GameStatus.XTurn);
+
+  static List<List<CellStatus>> createEmptyMap() => [
+        [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
+        [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
+        [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
+      ];
 }

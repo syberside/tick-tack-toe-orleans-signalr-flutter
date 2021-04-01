@@ -55,19 +55,110 @@ namespace OrleanPG.Client
             //}
 
             var token1 = await AuthorizeAsync(lobby, "1");
-            var token2 = await AuthorizeAsync(lobby, "2");
+            //var token2 = await AuthorizeAsync(lobby, "2");
 
-            var gameId = await CreateGameAsync(lobby, token1, true);
+            //var gameId = await CreateGameAsync(lobby, token1, true);
             //await ListGamesAsync(lobby);
 
             //gameId = await CreateGameAsync(lobby, token2, false);
             //await ListGamesAsync(lobby);
+            var gameId = ReadGameId();
 
-            await EnterGameAsync(lobby, gameId, token2);
+            var playForX = await EnterGameAsync(lobby, gameId, token1);
 
             //await ListGamesAsync(lobby);
 
-            await PlayAsync(clusterClient, token1, token2, gameId);
+            await PlaySinglePlayerAsync(clusterClient, token1, gameId, playForX);
+        }
+
+        private static async Task PlaySinglePlayerAsync(IClusterClient clusterClient, AuthorizationToken token, GameId gameId, bool playForX)
+        {
+            var game = clusterClient.GetGrain<IGame>(gameId.Value);
+            var observer = new GameObserver();
+            var reference = await clusterClient.CreateObjectReference<IGameObserver>(observer);
+            await game.SubscribeAndMarkAlive(reference);
+            //TODO: Get players info, understand are we X or O, start playing
+            var status = GameState.XTurn;
+            bool readTurn = false;
+            while (true)
+            {
+                switch (status)
+                {
+                    case GameState.XTurn:
+                        if (playForX)
+                        {
+                            readTurn = true;
+                            Console.WriteLine("Your turn");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Waiting for opponent turn");
+                        }
+                        break;
+                    case GameState.OTurn:
+                        if (!playForX)
+                        {
+                            readTurn = true;
+                            Console.WriteLine("Your turn");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Waiting for opponent turn");
+                        }
+                        break;
+                    case GameState.XWin:
+                        if (playForX)
+                        {
+                            Console.WriteLine("You won!");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Opponent won :(");
+                        }
+                        return;
+                    case GameState.OWin:
+                        if (!playForX)
+                        {
+                            Console.WriteLine("You won!");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Opponent won :(");
+                        }
+                        return;
+                    case GameState.TimedOut:
+                        Console.WriteLine("Timeout :(");
+                        return;
+                    default: throw new NotImplementedException();
+                }
+                if (readTurn)
+                {
+                    var input = Console.ReadLine().Trim().Split(" ").ToArray();
+                    var x = int.Parse(input[0]);
+                    var y = int.Parse(input[1]);
+                    var state = await game.TurnAsync(x, y, token);
+                    await game.SubscribeAndMarkAlive(reference);
+                    Console.WriteLine(state.GameMap.ToMapString(" | "));
+                    status = state.Status;
+                }
+                else
+                {
+                    while (!observer.IsUpdated)
+                    {
+                        Console.Write(".");
+                        await Task.Delay(1000);
+                    }
+                    status = observer.LastUpdate.Status;
+                }
+            }
+        }
+
+        private static GameId ReadGameId()
+        {
+            Console.Write("Enter game id: ");
+            var idStr = Console.ReadLine().Trim();
+            var guid = Guid.Parse(idStr);
+            return new GameId(guid);
         }
 
         private static async Task<GameStatusDto> GetGameStatus(IClusterClient clusterClient, GameId id)
@@ -124,11 +215,13 @@ namespace OrleanPG.Client
             return await lobby.AuthorizeAsync(userName);
         }
 
-        private static async Task EnterGameAsync(IGameLobby lobby, GameId gameId, AuthorizationToken userToken)
+        private static async Task<bool> EnterGameAsync(IGameLobby lobby, GameId gameId, AuthorizationToken userToken)
         {
-            await lobby.JoinGameAsync(userToken, gameId);
-            Console.WriteLine("Entered game");
+            var result = await lobby.JoinGameAsync(userToken, gameId);
+            var playFor = result ? 'X' : 'O';
+            Console.WriteLine($"Entered game. Playing for {playFor}");
             Console.WriteLine("");
+            return result;
         }
 
         private static async Task<GameId> CreateGameAsync(IGameLobby lobby, AuthorizationToken token, bool isX)

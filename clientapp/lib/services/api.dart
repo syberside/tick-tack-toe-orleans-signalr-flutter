@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/pages/lobbies_page.dart';
 import 'package:http/io_client.dart';
 import 'package:signalr_core/signalr_core.dart';
@@ -6,7 +9,14 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class Api {
+  Api() {
+    print("API CREATED");
+  }
   HubConnection? _connection;
+  StreamController<GameStatusDto> _gameUpdatesCtrl =
+      StreamController.broadcast(sync: false);
+
+  Stream<GameStatusDto> get gameUpdates => _gameUpdatesCtrl.stream;
 
   Future<void> connect() async {
     final host = kIsWeb
@@ -25,14 +35,24 @@ class Api {
         .build();
 
     await connection.start();
-    _connection = connection;
-    // connection.on('GameUpdated', (message) {
-    //   print("RECEIVED");
-    //   print(message.toString());
-    // });
+    connection.on('GameUpdated', (message) {
+      //TODO: filter for current game
+      print("Received update: $message");
+      var u = (message as List<dynamic>).first;
+      var m = u["gameMap"]["data"] as List<dynamic>;
+      var data = GameStatusDto(
+        GameStatus.values[u["status"] as int],
+        m
+            .map((r) => (r as List<dynamic>)
+                .map((x) => CellStatus.values[x as int])
+                .toList())
+            .toList(),
+      );
+      _gameUpdatesCtrl.add(data);
+      print("Update resended");
+    });
 
-    // await connection
-    //     .invoke('Watch', args: ['364b499d-4d63-497b-b41a-d21469ad65a8']);
+    _connection = connection;
   }
 
   Future<void> disconnect() async {
@@ -72,6 +92,21 @@ class Api {
       token,
       playForX,
     ]);
+    print("Created game: $result");
     return result as String;
+  }
+
+  Future<void> subscribeForChanges(String gameId) async {
+    if (_connection == null) {
+      throw Error();
+    }
+    await _connection?.invoke("Watch", args: [gameId]);
+  }
+
+  Future<void> turn(int x, int y, String authToken, String gameId) async {
+    if (_connection == null) {
+      throw Error();
+    }
+    await _connection?.invoke("Turn", args: [x, y, authToken, gameId]);
   }
 }

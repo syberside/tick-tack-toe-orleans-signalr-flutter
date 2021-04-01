@@ -2,10 +2,10 @@
 {
     public enum GameState
     {
-        XTurn = 1,
-        OTurn = 2,
-        XWin = 3,
-        OWin = 4,
-        TimedOut = 5,
+        XTurn = 0,
+        OTurn = 1,
+        XWin = 2,
+        OWin = 3,
+        TimedOut = 4,
     }
 }

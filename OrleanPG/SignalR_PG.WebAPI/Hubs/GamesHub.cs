@@ -53,6 +53,13 @@ namespace SignalR_PG.WebAPI.Hubs
             return result.Value.ToString();
         }
 
+        public async Task Turn(int x, int y, string authToken, Guid gameId)
+        {
+            //TODO: add subscription to games list update
+            var lobbie = _clusterClient.GetGrain<IGame>(gameId);
+            var result = await lobbie.TurnAsync(x, y, new AuthorizationToken(authToken));
+        }
+
         public async Task Watch(Guid gameId)
         {
             var groupName = GetGroupName(gameId);
@@ -98,6 +105,8 @@ namespace SignalR_PG.WebAPI.Hubs
 
         public async void GameStateUpdated(GameStatusDto newState)
         {
+            //TODO: poll grain for updates
+            //OR replace notifications with stream (or something else)
             await _clientProxy.SendAsync("GameUpdated", newState);
         }
     }

@@ -50,8 +50,8 @@ namespace OrleanPG.Grains.Interfaces
 
     public enum CellStatus
     {
-        Empty,
-        X,
-        O,
+        Empty = 0,
+        X = 1,
+        O = 2,
     }
 }

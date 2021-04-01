@@ -7,7 +7,7 @@ namespace OrleanPG.Grains.GameLobbyGrain
     {
         public bool IsRunning => XPlayer != null && OPlayer != null;
 
-        public GameParticipation JoinPlayer(AuthorizationToken otherPlayer)
+        public GameParticipation JoinPlayer(AuthorizationToken otherPlayer, out bool playForX)
         {
             if (XPlayer == null)
             {
@@ -15,6 +15,7 @@ namespace OrleanPG.Grains.GameLobbyGrain
                 {
                     throw new ArgumentException();
                 }
+                playForX = true;
                 return this with { XPlayer = otherPlayer };
             }
             else
@@ -24,6 +25,7 @@ namespace OrleanPG.Grains.GameLobbyGrain
                     throw new ArgumentException();
 
                 }
+                playForX = false;
                 return this with { OPlayer = otherPlayer };
             }
         }

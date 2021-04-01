@@ -1,51 +1,45 @@
+import 'package:clientapp/models/auth_model.dart';
 import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/pages/lobbies_page.dart';
+import 'package:clientapp/services/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
-class GamePage extends StatefulWidget {
-  final GameData data;
-  final UserGameParticipation mode;
-
-  GamePage({
-    Key? key,
-    required this.data,
-    required this.mode,
-  }) : super(key: key);
-
+class GamePage extends StatelessWidget {
   @override
-  _GamePageState createState() => _GamePageState();
-}
-
-class _GamePageState extends State<GamePage> {
-  @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: Text("Play game")),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _statusWidget(),
-          Table(
-            border: TableBorder(
-              horizontalInside: BorderSide(width: 3),
-              verticalInside: BorderSide(width: 3),
+  Widget build(BuildContext context) {
+    // TODO: switch to model
+    var model = context.watch<CurrentGameModel>();
+    return Scaffold(
+        appBar: AppBar(title: Text("Play game")),
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _statusWidget(model),
+            Table(
+              border: TableBorder(
+                horizontalInside: BorderSide(width: 3),
+                verticalInside: BorderSide(width: 3),
+              ),
+              children: _buildTableCells(model, context),
             ),
-            children: _buildTableCells(),
-          ),
-        ],
-      ));
+          ],
+        ));
+  }
 
-  List<TableRow> _buildTableCells() {
+  List<TableRow> _buildTableCells(
+      CurrentGameModel model, BuildContext context) {
     List<TableRow> result = [];
-    for (var i = 0; i < widget.data.gameMap.length; i++) {
+    for (var i = 0; i < model.gameMap.length; i++) {
       List<Widget> rowItems = [];
-      for (var j = 0; j < widget.data.gameMap.length; j++) {
+      for (var j = 0; j < model.gameMap.length; j++) {
         var gesture = GestureDetector(
-          onTap: () => widget.data.generalInfo.isFilledWithPlayers &&
-                  widget.mode != UserGameParticipation.readOnly
-              ? _tap(i, j)
+          onTap: () => model.generalInfo!.isFilledWithPlayers &&
+                  model.participation != UserGameParticipation.readOnly
+              ? _tap(i, j, model, context)
               : null,
-          child: _toWidget(widget.data.gameMap[i][j]),
+          child: _toWidget(model.gameMap[i][j]),
         );
         rowItems.add(gesture);
       }
@@ -78,33 +72,39 @@ class _GamePageState extends State<GamePage> {
     }
   }
 
-  Widget _statusWidget() {
-    if (!widget.data.generalInfo.isFilledWithPlayers) {
+  Widget _statusWidget(CurrentGameModel model) {
+    if (!model.generalInfo!.isFilledWithPlayers) {
       return Text("Waiting for other player to join...");
     }
-    switch (widget.data.status) {
+    switch (model.status) {
       case GameStatus.XTurn:
-        return widget.mode == UserGameParticipation.readOnly
-            ? Text("X turn")
-            : widget.mode == UserGameParticipation.playForX
-                ? Text("Your turn!")
-                : Text("Waiting for opponent turn");
+        switch (model.participation) {
+          case UserGameParticipation.readOnly:
+            return Text("X turn");
+          case UserGameParticipation.playForX:
+            return Text("Your turn!");
+          case UserGameParticipation.playForO:
+            return Text("Waiting for opponent turn X");
+        }
       case GameStatus.OTurn:
-        return widget.mode == UserGameParticipation.readOnly
-            ? Text("O turn")
-            : widget.mode == UserGameParticipation.playForY
-                ? Text("Your turn!")
-                : Text("Waiting for opponent turn");
+        switch (model.participation) {
+          case UserGameParticipation.readOnly:
+            return Text("O turn");
+          case UserGameParticipation.playForX:
+            return Text("Waiting for opponent turn O");
+          case UserGameParticipation.playForO:
+            return Text("Your turn!");
+        }
       case GameStatus.XWin:
-        return widget.mode == UserGameParticipation.readOnly
+        return model.participation == UserGameParticipation.readOnly
             ? Text("X Won!")
-            : widget.mode == UserGameParticipation.playForX
+            : model.participation == UserGameParticipation.playForX
                 ? Text("You Won!")
                 : Text("You lose :( ");
       case GameStatus.OWin:
-        return widget.mode == UserGameParticipation.readOnly
+        return model.participation == UserGameParticipation.readOnly
             ? Text("O Won!")
-            : widget.mode == UserGameParticipation.playForY
+            : model.participation == UserGameParticipation.playForO
                 ? Text("You Won!")
                 : Text("You lose :( ");
       case GameStatus.Timeout:
@@ -114,23 +114,18 @@ class _GamePageState extends State<GamePage> {
     }
   }
 
-  void _tap(int i, int j) {
-    switch (widget.data.gameMap[i][j]) {
+  Future<void> _tap(
+      int i, int j, CurrentGameModel model, BuildContext context) async {
+    switch (model.gameMap[i][j]) {
       case CellStatus.Empty:
-        if (widget.mode == UserGameParticipation.playForX &&
-                widget.data.status == GameStatus.XTurn ||
-            widget.mode == UserGameParticipation.playForY &&
-                widget.data.status == GameStatus.OTurn) {
-          setState(() {
-            widget.data.gameMap[i][j] =
-                widget.mode == UserGameParticipation.playForX
-                    ? CellStatus.X
-                    : CellStatus.O;
-            widget.data.status = widget.data.status == GameStatus.XTurn
-                ? GameStatus.OTurn
-                : GameStatus.XTurn;
-          });
-          //TODO: call backend
+        if (model.participation == UserGameParticipation.playForX &&
+                model.status == GameStatus.XTurn ||
+            model.participation == UserGameParticipation.playForO &&
+                model.status == GameStatus.OTurn) {
+          model.makeOptimisticTurn(i, j);
+          var api = context.read<Api>();
+          var userModel = context.read<AuthData>();
+          await api.turn(i, j, userModel.authToken!, model.generalInfo!.gameId);
         }
         break;
       case CellStatus.X:

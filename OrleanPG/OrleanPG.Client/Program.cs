@@ -3,6 +3,8 @@ using OrleanPG.Client.Observers;
 using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Configuration;
+using Orleans.Hosting;
+using Orleans.Streams;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,6 +31,7 @@ namespace OrleanPG.Client
 
             var client = new ClientBuilder()
                 .UseLocalhostClustering()
+                .AddAzureQueueStreams("GameUpdatesStreamProvider", (ClusterClientAzureQueueStreamConfigurator cfg) => { })
                 .Configure<ClusterOptions>(options =>
                 {
                     options.ClusterId = "dev";
@@ -74,6 +77,17 @@ namespace OrleanPG.Client
         private static async Task PlaySinglePlayerAsync(IClusterClient clusterClient, AuthorizationToken token, GameId gameId, bool playForX)
         {
             var game = clusterClient.GetGrain<IGame>(gameId.Value);
+
+            var streamProvider = clusterClient.GetStreamProvider("GameUpdatesStreamProvider");
+            var stream = streamProvider.GetStream<GameStatusDto>(gameId.Value, "GameUpdates");
+            await stream.SubscribeAsync((newState, token) =>
+            {
+                Console.WriteLine("!!! Game udpated:");
+                Console.WriteLine(newState.Status);
+                Console.WriteLine(newState.GameMap);
+                return Task.CompletedTask;
+            });
+
             var observer = new GameObserver();
             var reference = await clusterClient.CreateObjectReference<IGameObserver>(observer);
             await game.SubscribeAndMarkAlive(reference);

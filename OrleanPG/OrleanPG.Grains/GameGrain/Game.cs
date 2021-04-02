@@ -33,16 +33,21 @@ namespace OrleanPG.Grains.GameGrain
         {
             _gameState.State = data;
             await _gameState.WriteStateAsync();
-            NotifyObservers();
+            await NotifyObservers();
         }
 
-        private void NotifyObservers()
+        private async Task NotifyObservers()
         {
             var update = GetGameStatusDtoFromGameState();
             foreach (var subscription in _gameObservers.GetActualSubscribers)
             {
                 subscription.GameStateUpdated(update);
             }
+
+            //new implementation (stream based)
+            var streamProvider = GetStreamProvider("GameUpdatesStreamProvider");
+            var stream = streamProvider.GetStream<GameStatusDto>(this.GetPrimaryKey(), "GameUpdates");
+            await stream.OnNextAsync(update);
         }
 
         public async Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)

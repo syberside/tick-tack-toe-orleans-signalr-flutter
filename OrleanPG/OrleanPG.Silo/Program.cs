@@ -44,6 +44,14 @@ namespace OrleanPG.Silo
             // define the cluster configuration
             var builder = new SiloHostBuilder()
                 .UseLocalhostClustering()
+                .AddAzureQueueStreams("GameUpdatesStreamProvider", cfg =>
+                 {
+                     cfg.ConfigureAzureQueue(queueCfg =>
+                     {
+                         queueCfg.Configure(SetupConnectionString);
+                     });
+                 })
+                .AddMemoryGrainStorage("PubSubStore")
                 .UseAzureTableReminderService(SetupConnectionString)
                 .AddAzureTableGrainStorage("game_states_store", SetupStore)
                 .AddAzureTableGrainStorage("user_states_store", SetupStore)
@@ -65,6 +73,11 @@ namespace OrleanPG.Silo
             var host = builder.Build();
             await host.StartAsync();
             return host;
+        }
+
+        private static void SetupConnectionString(AzureQueueOptions options)
+        {
+            options.ConnectionString = ConnectionString;
         }
 
         private static void SetupConnectionString(AzureTableReminderStorageOptions options)

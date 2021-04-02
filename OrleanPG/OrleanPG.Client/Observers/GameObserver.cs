@@ -1,9 +1,10 @@
 ﻿using OrleanPG.Grains.Interfaces;
+using Orleans.Streams;
 using System;
 
 namespace OrleanPG.Client.Observers
 {
-    public class GameObserver : IGameObserver
+    public class GameObserver
     {
         public bool IsUpdated { get; set; }
         public GameStatusDto LastUpdate { get; private set; }
@@ -14,6 +15,12 @@ namespace OrleanPG.Client.Observers
             Console.WriteLine(newState.GameMap);
             IsUpdated = true;
             LastUpdate = newState;
+        }
+
+        internal void Clear()
+        {
+            IsUpdated = false;
+            LastUpdate = null;
         }
     }
 }

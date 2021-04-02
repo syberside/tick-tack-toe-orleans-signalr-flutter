@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using OrleanPG.Grains.Interfaces;
+using Orleans.Streams;
 using Orleans;
 using System;
 using System.Collections.Concurrent;
@@ -70,31 +71,23 @@ namespace SignalR_PG.WebAPI.Hubs
             }
 
             var subscriber = new Subscr(Clients.Group(groupName));
-            var subscrRef = await _clusterClient.CreateObjectReference<IGameObserver>(subscriber);
-            var game = _clusterClient.GetGrain<IObservableGame>(gameId);
-            await game.SubscribeAndMarkAlive(subscrRef);
-
+            var streamProvider = _clusterClient.GetStreamProvider("GameUpdatesStreamProvider");
+            var stream = streamProvider.GetStream<GameStatusDto>(gameId, "GameUpdates");
+            var handle = await stream.SubscribeAsync((update, token) => subscriber.GameStateUpdated(update));
+            subscriber.Handle = handle;
         }
 
         private static string GetGroupName(Guid gameId) => $"Game: {gameId}";
 
-        public async Task Ping(Guid gameId)
-        {
-            var game = _clusterClient.GetGrain<IObservableGame>(gameId);
-            await game.SubscribeAndMarkAlive(_subscriptions[gameId]);
-        }
-
         public async Task Unwatch(Guid gameId)
         {
-            var game = _clusterClient.GetGrain<IObservableGame>(gameId);
-            await game.UnsubscribeFromUpdates(_subscriptions[gameId]);
-            _subscriptions.Remove(gameId, out var _);
-
+            _subscriptions.Remove(gameId, out var subscr);
+            await subscr.DisposeAsync();
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupName(gameId));
         }
     }
 
-    public class Subscr : IGameObserver
+    public class Subscr : IAsyncDisposable
     {
         private readonly IClientProxy _clientProxy;
 
@@ -103,11 +96,19 @@ namespace SignalR_PG.WebAPI.Hubs
             _clientProxy = clientProxy;
         }
 
-        public async void GameStateUpdated(GameStatusDto newState)
+        public StreamSubscriptionHandle<GameStatusDto> Handle { get; set; }
+
+        public async Task GameStateUpdated(GameStatusDto newState)
         {
-            //TODO: poll grain for updates
-            //OR replace notifications with stream (or something else)
             await _clientProxy.SendAsync("GameUpdated", newState);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Handle != null)
+            {
+                await Handle.UnsubscribeAsync();
+            }
         }
     }
 

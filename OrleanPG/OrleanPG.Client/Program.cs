@@ -80,18 +80,13 @@ namespace OrleanPG.Client
 
             var streamProvider = clusterClient.GetStreamProvider("GameUpdatesStreamProvider");
             var stream = streamProvider.GetStream<GameStatusDto>(gameId.Value, "GameUpdates");
+            var observer = new GameObserver();
             await stream.SubscribeAsync((newState, token) =>
             {
-                Console.WriteLine("!!! Game udpated:");
-                Console.WriteLine(newState.Status);
-                Console.WriteLine(newState.GameMap);
+                observer.GameStateUpdated(newState);
                 return Task.CompletedTask;
             });
 
-            var observer = new GameObserver();
-            var reference = await clusterClient.CreateObjectReference<IGameObserver>(observer);
-            await game.SubscribeAndMarkAlive(reference);
-            //TODO: Get players info, understand are we X or O, start playing
             var status = GameState.XTurn;
             bool readTurn = false;
             while (true)
@@ -151,7 +146,6 @@ namespace OrleanPG.Client
                     var x = int.Parse(input[0]);
                     var y = int.Parse(input[1]);
                     var state = await game.TurnAsync(x, y, token);
-                    await game.SubscribeAndMarkAlive(reference);
                     Console.WriteLine(state.GameMap.ToMapString(" | "));
                     status = state.Status;
                 }
@@ -162,6 +156,7 @@ namespace OrleanPG.Client
                         Console.Write(".");
                         await Task.Delay(1000);
                     }
+                    observer.Clear();
                     status = observer.LastUpdate.Status;
                 }
             }
@@ -182,12 +177,18 @@ namespace OrleanPG.Client
             return data;
         }
 
-        private static async Task PlayAsync(IClusterClient clusterClient, AuthorizationToken gameTokenFor1, AuthorizationToken gameTokenFor2, GameId id)
+        private static async Task PlayAsync(IClusterClient clusterClient, AuthorizationToken gameTokenFor1, AuthorizationToken gameTokenFor2, GameId gameId)
         {
-            var game = clusterClient.GetGrain<IGame>(id.Value);
+            var game = clusterClient.GetGrain<IGame>(gameId.Value);
+
+            var streamProvider = clusterClient.GetStreamProvider("GameUpdatesStreamProvider");
+            var stream = streamProvider.GetStream<GameStatusDto>(gameId.Value, "GameUpdates");
             var observer = new GameObserver();
-            var reference = await clusterClient.CreateObjectReference<IGameObserver>(observer);
-            await game.SubscribeAndMarkAlive(reference);
+            await stream.SubscribeAsync((newState, token) =>
+            {
+                observer.GameStateUpdated(newState);
+                return Task.CompletedTask;
+            });
             var status = GameState.XTurn;
             while (true)
             {
@@ -215,7 +216,6 @@ namespace OrleanPG.Client
                 var x = int.Parse(input[0]);
                 var y = int.Parse(input[1]);
                 var state = await game.TurnAsync(x, y, token);
-                await game.SubscribeAndMarkAlive(reference);
                 Console.WriteLine(state.GameMap.ToMapString(" | "));
                 status = state.Status;
             }

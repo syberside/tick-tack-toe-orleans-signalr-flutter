@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Configuration;
 using Newtonsoft.Json.Serialization;
+using Orleans.Hosting;
 
 namespace SignalR_PG.WebAPI
 {
@@ -58,6 +59,7 @@ namespace SignalR_PG.WebAPI
         {
             var client = new ClientBuilder()
                 .UseLocalhostClustering()
+                .AddAzureQueueStreams("GameUpdatesStreamProvider", (ClusterClientAzureQueueStreamConfigurator cfg) => { })
                 .Configure<ClusterOptions>(options =>
                 {
                     options.ClusterId = "dev";

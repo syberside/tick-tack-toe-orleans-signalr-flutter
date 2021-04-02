@@ -6,6 +6,7 @@ using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
 using Orleans.Runtime;
+using Orleans.Streams;
 using System;
 using System.Threading.Tasks;
 using Xunit;
@@ -15,19 +16,20 @@ namespace OrleanPG.Grains.UnitTests
     public class GameUnitTests
     {
         private readonly Mock<IPersistentState<GameStorageData>> _storeMock;
-        private readonly Mock<ISubscriptionManager<IGameObserver>> _subscriptionManagerMock;
         private readonly Mock<Game> _mockedGame;
+        private readonly Mock<IGrainIdProvider> _idProviderMock;
         private readonly Game _game;
 
 
         public GameUnitTests()
         {
             _storeMock = PersistanceHelper.CreateAndSetupStateWriteMock<GameStorageData>();
-            _subscriptionManagerMock = new();
-            _subscriptionManagerMock.Setup(x => x.GetActualSubscribers).Returns(new IGameObserver[0]);
-            _mockedGame = new Mock<Game>(() => new Game(_storeMock.Object, _subscriptionManagerMock.Object));
+            _idProviderMock = new();
+            _mockedGame = new Mock<Game>(() => new Game(_storeMock.Object, _idProviderMock.Object));
             // suppress base RegisterOrUpdateReminder calls
             _mockedGame.Setup(x => x.RegisterOrUpdateReminder(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>())).ReturnsAsync((IGrainReminder)null);
+            // TODO: Check
+            _mockedGame.Setup(x => x.GetStreamProvider(It.IsAny<string>())).Returns(new Mock<IStreamProvider>() { DefaultValue = DefaultValue.Mock }.Object);
             _game = _mockedGame.Object;
         }
 
@@ -42,14 +44,23 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task StartAsync_OnSuccess_NotifySubscribers(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        public async Task StartAsync_OnSuccess_NotifySubscribers(AuthorizationToken tokenX, AuthorizationToken tokenO, Guid grainId)
         {
-            var subscriber = new Mock<IGameObserver>();
-            _subscriptionManagerMock.Setup(x => x.GetActualSubscribers).Returns(new[] { subscriber.Object });
+            var streamMock = SetupStreamMock(grainId);
 
             await _game.StartAsync(tokenX, tokenO);
 
-            subscriber.Verify(x => x.GameStateUpdated(new GameStatusDto()), Times.Once);
+            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(), null), Times.Once);
+        }
+
+        private Mock<IAsyncStream<GameStatusDto>> SetupStreamMock(Guid grainId)
+        {
+            _idProviderMock.Setup(x => x.GetGrainId(_game)).Returns(grainId);
+            var streamMock = new Mock<IAsyncStream<GameStatusDto>>();
+            var providerMock = new Mock<IStreamProvider>();
+            providerMock.Setup(x => x.GetStream<GameStatusDto>(grainId, "GameUpdates")).Returns(streamMock.Object);
+            _mockedGame.Setup(x => x.GetStreamProvider("GameUpdatesStreamProvider")).Returns(providerMock.Object);
+            return streamMock;
         }
 
         [Theory, AutoData]
@@ -276,10 +287,10 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task TurnAsync_OnValidTurn_NotifySubsribers(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        public async Task TurnAsync_OnValidTurn_NotifySubsribers(AuthorizationToken tokenX, AuthorizationToken tokenO, Guid grainId)
         {
-            var subscriber = new Mock<IGameObserver>();
-            _subscriptionManagerMock.Setup(x => x.GetActualSubscribers).Returns(new[] { subscriber.Object });
+            var streamMock = SetupStreamMock(grainId);
+
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
 
             await _game.TurnAsync(0, 0, tokenX);
@@ -290,7 +301,7 @@ namespace OrleanPG.Grains.UnitTests
                 {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
                 {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
-            subscriber.Verify(x => x.GameStateUpdated(new GameStatusDto(GameState.OTurn, new GameMap(gameMap))), Times.Once);
+            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.OTurn, new GameMap(gameMap)), null), Times.Once);
         }
         #endregion
 
@@ -345,16 +356,15 @@ namespace OrleanPG.Grains.UnitTests
         [Theory]
         [InlineAutoData(GameState.OTurn)]
         [InlineAutoData(GameState.XTurn)]
-        public async Task ReceiveReminder_OnGameNotInEndState_NotifyObservers(GameState gameState)
+        public async Task ReceiveReminder_OnGameNotInEndState_NotifyObservers(GameState gameState, Guid grainId)
         {
-            var subscriber = new Mock<IGameObserver>();
-            _subscriptionManagerMock.Setup(x => x.GetActualSubscribers).Returns(new[] { subscriber.Object });
+            var streamMock = SetupStreamMock(grainId);
             var _game = _mockedGame.Object;
             _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
 
             await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
 
-            subscriber.Verify(x => x.GameStateUpdated(new GameStatusDto(GameState.TimedOut, new GameMap())), Times.Once);
+            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.TimedOut, new GameMap()), null), Times.Once);
         }
         #endregion
     }

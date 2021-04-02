@@ -2,6 +2,7 @@
 using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Runtime;
+using Orleans.Streams;
 using System;
 using System.Threading.Tasks;
 
@@ -10,10 +11,7 @@ namespace OrleanPG.Grains.GameGrain
     public class Game : Grain, IGame, IGameInitializer
     {
         private readonly IPersistentState<GameStorageData> _gameState;
-        /// <summary>
-        /// TODO: Inject and cover with tests related code
-        /// </summary>
-        private readonly ISubscriptionManager<IGameObserver> _gameObservers;
+        private readonly IGrainIdProvider _grainIdProvider;
 
         public const string TimeoutCheckReminderName = "timeout_check";
         public static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
@@ -23,10 +21,10 @@ namespace OrleanPG.Grains.GameGrain
 
         public Game(
             [PersistentState("game_game_state", "game_state_store")] IPersistentState<GameStorageData> gameState,
-            ISubscriptionManager<IGameObserver> gameObservers)
+            IGrainIdProvider grainIdProvider)
         {
             _gameState = gameState;
-            _gameObservers = gameObservers;
+            _grainIdProvider = grainIdProvider;
         }
 
         private async Task UpdateState(GameStorageData data)
@@ -39,14 +37,10 @@ namespace OrleanPG.Grains.GameGrain
         private async Task NotifyObservers()
         {
             var update = GetGameStatusDtoFromGameState();
-            foreach (var subscription in _gameObservers.GetActualSubscribers)
-            {
-                subscription.GameStateUpdated(update);
-            }
-
-            //new implementation (stream based)
+            //TODO: Move to constant
             var streamProvider = GetStreamProvider("GameUpdatesStreamProvider");
-            var stream = streamProvider.GetStream<GameStatusDto>(this.GetPrimaryKey(), "GameUpdates");
+            var grainId = _grainIdProvider.GetGrainId(this);
+            var stream = streamProvider.GetStream<GameStatusDto>(grainId, "GameUpdates");
             await stream.OnNextAsync(update);
         }
 
@@ -254,18 +248,11 @@ namespace OrleanPG.Grains.GameGrain
         public new virtual Task<IGrainReminder> RegisterOrUpdateReminder(string reminderName, TimeSpan dueTime, TimeSpan period)
             => base.RegisterOrUpdateReminder(reminderName, dueTime, period);
 
-        public Task<GameStatusDto> SubscribeAndMarkAlive(IGameObserver observer)
-        {
-            _gameObservers.SubscribeOrMarkAlive(observer);
-            return Task.FromResult(GetGameStatusDtoFromGameState());
-        }
+        /// <summary>
+        /// NOTE: Required for unit tests
+        /// </summary>
+        public new virtual IStreamProvider GetStreamProvider(string name) => base.GetStreamProvider(name);
 
         private GameStatusDto GetGameStatusDtoFromGameState() => new GameStatusDto(_gameState.State.Status, _gameState.State.Map);
-
-        public Task UnsubscribeFromUpdates(IGameObserver observer)
-        {
-            _gameObservers.Unsubscribe(observer);
-            return Task.CompletedTask;
-        }
     }
 }

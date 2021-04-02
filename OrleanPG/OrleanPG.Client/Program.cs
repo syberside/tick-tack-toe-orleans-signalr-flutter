@@ -31,7 +31,7 @@ namespace OrleanPG.Client
 
             var client = new ClientBuilder()
                 .UseLocalhostClustering()
-                .AddAzureQueueStreams("GameUpdatesStreamProvider", (ClusterClientAzureQueueStreamConfigurator cfg) => { })
+                .AddAzureQueueStreams(Constants.GameUpdatesStreamProviderName, (ClusterClientAzureQueueStreamConfigurator cfg) => { })
                 .Configure<ClusterOptions>(options =>
                 {
                     options.ClusterId = "dev";

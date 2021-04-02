@@ -58,8 +58,8 @@ namespace OrleanPG.Grains.UnitTests
             _idProviderMock.Setup(x => x.GetGrainId(_game)).Returns(grainId);
             var streamMock = new Mock<IAsyncStream<GameStatusDto>>();
             var providerMock = new Mock<IStreamProvider>();
-            providerMock.Setup(x => x.GetStream<GameStatusDto>(grainId, "GameUpdates")).Returns(streamMock.Object);
-            _mockedGame.Setup(x => x.GetStreamProvider("GameUpdatesStreamProvider")).Returns(providerMock.Object);
+            providerMock.Setup(x => x.GetStream<GameStatusDto>(grainId, Constants.GameUpdatesStreamName)).Returns(streamMock.Object);
+            _mockedGame.Setup(x => x.GetStreamProvider(Constants.GameUpdatesStreamProviderName)).Returns(providerMock.Object);
             return streamMock;
         }
 

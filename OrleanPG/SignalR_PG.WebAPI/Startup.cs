@@ -10,6 +10,7 @@ using Orleans;
 using Orleans.Configuration;
 using Newtonsoft.Json.Serialization;
 using Orleans.Hosting;
+using OrleanPG.Grains.Interfaces;
 
 namespace SignalR_PG.WebAPI
 {
@@ -51,7 +52,7 @@ namespace SignalR_PG.WebAPI
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapHub<GamesHub>("/chatHub");
+                endpoints.MapHub<GamesHub>("/gamesHub");
             });
         }
 
@@ -59,7 +60,7 @@ namespace SignalR_PG.WebAPI
         {
             var client = new ClientBuilder()
                 .UseLocalhostClustering()
-                .AddAzureQueueStreams("GameUpdatesStreamProvider", (ClusterClientAzureQueueStreamConfigurator cfg) => { })
+                .AddAzureQueueStreams(Constants.GameUpdatesStreamProviderName, (ClusterClientAzureQueueStreamConfigurator cfg) => { })
                 .Configure<ClusterOptions>(options =>
                 {
                     options.ClusterId = "dev";

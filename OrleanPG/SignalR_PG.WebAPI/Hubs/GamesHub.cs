@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using OrleanPG.Grains.Interfaces;
-using Orleans.Streams;
 using Orleans;
+using SignalR_PG.WebAPI.Dto;
+using SignalR_PG.WebAPI.Infrastructure;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace SignalR_PG.WebAPI.Hubs
     public class GamesHub : Hub
     {
         private readonly IClusterClient _clusterClient;
-        private readonly static ConcurrentDictionary<Guid, Subscr> _subscriptions = new();
+        private readonly static ConcurrentDictionary<Guid, StreamToSignalRBridge> _subscriptions = new();
 
         public GamesHub(IClusterClient clusterClient)
         {
@@ -69,11 +70,10 @@ namespace SignalR_PG.WebAPI.Hubs
                 return;
             }
 
-            var subscriber = new Subscr(Clients.Group(groupName));
             var streamProvider = _clusterClient.GetStreamProvider(Constants.GameUpdatesStreamProviderName);
             var stream = streamProvider.GetStream<GameStatusDto>(gameId, Constants.GameUpdatesStreamName);
-            var handle = await stream.SubscribeAsync((update, token) => subscriber.GameStateUpdated(update));
-            subscriber.Handle = handle;
+            var subscriber = new StreamToSignalRBridge(stream, Clients.Group(groupName));
+            await subscriber.Start();
         }
 
         private static string GetGroupName(Guid gameId) => $"Game: {gameId}";
@@ -84,46 +84,5 @@ namespace SignalR_PG.WebAPI.Hubs
             await subscr.DisposeAsync();
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupName(gameId));
         }
-    }
-
-    public class Subscr : IAsyncDisposable
-    {
-        private readonly IClientProxy _clientProxy;
-
-        public Subscr(IClientProxy clientProxy)
-        {
-            _clientProxy = clientProxy;
-        }
-
-        public StreamSubscriptionHandle<GameStatusDto> Handle { get; set; }
-
-        public async Task GameStateUpdated(GameStatusDto newState)
-        {
-            await _clientProxy.SendAsync("GameUpdated", newState);
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (Handle != null)
-            {
-                await Handle.UnsubscribeAsync();
-            }
-        }
-    }
-
-    public class GameGeneralInfoDto
-    {
-        public string? playerX { get; set; }
-        public string? playerO { get; set; }
-        public string gameId { get; set; }
-    }
-
-    public enum GameDtoStatus
-    {
-        XTurn,
-        OTurn,
-        XWin,
-        OWin,
-        Timeout,
     }
 }

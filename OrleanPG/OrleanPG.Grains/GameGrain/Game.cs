@@ -38,9 +38,9 @@ namespace OrleanPG.Grains.GameGrain
         {
             var update = GetGameStatusDtoFromGameState();
             //TODO: Move to constant
-            var streamProvider = GetStreamProvider("GameUpdatesStreamProvider");
+            var streamProvider = GetStreamProvider(Constants.GameUpdatesStreamProviderName);
             var grainId = _grainIdProvider.GetGrainId(this);
-            var stream = streamProvider.GetStream<GameStatusDto>(grainId, "GameUpdates");
+            var stream = streamProvider.GetStream<GameStatusDto>(grainId, Constants.GameUpdatesStreamName);
             await stream.OnNextAsync(update);
         }
 

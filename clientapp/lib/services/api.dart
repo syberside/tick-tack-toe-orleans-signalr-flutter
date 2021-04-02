@@ -26,7 +26,7 @@ class Api {
             : 'localhost';
     final connection = HubConnectionBuilder()
         .withUrl(
-            'http://$host:5000/chatHub',
+            'http://$host:5000/gamesHub',
             HttpConnectionOptions(
               client: IOClient(
                   HttpClient()..badCertificateCallback = (x, y, z) => true),

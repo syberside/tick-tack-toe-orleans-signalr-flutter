@@ -56,7 +56,6 @@ namespace SignalR_PG.WebAPI.Hubs
 
         public async Task Turn(int x, int y, string authToken, Guid gameId)
         {
-            //TODO: add subscription to games list update
             var lobbie = _clusterClient.GetGrain<IGame>(gameId);
             var result = await lobbie.TurnAsync(x, y, new AuthorizationToken(authToken));
         }
@@ -71,8 +70,8 @@ namespace SignalR_PG.WebAPI.Hubs
             }
 
             var subscriber = new Subscr(Clients.Group(groupName));
-            var streamProvider = _clusterClient.GetStreamProvider("GameUpdatesStreamProvider");
-            var stream = streamProvider.GetStream<GameStatusDto>(gameId, "GameUpdates");
+            var streamProvider = _clusterClient.GetStreamProvider(Constants.GameUpdatesStreamProviderName);
+            var stream = streamProvider.GetStream<GameStatusDto>(gameId, Constants.GameUpdatesStreamName);
             var handle = await stream.SubscribeAsync((update, token) => subscriber.GameStateUpdated(update));
             subscriber.Handle = handle;
         }

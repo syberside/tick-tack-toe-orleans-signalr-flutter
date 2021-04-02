@@ -78,8 +78,8 @@ namespace OrleanPG.Client
         {
             var game = clusterClient.GetGrain<IGame>(gameId.Value);
 
-            var streamProvider = clusterClient.GetStreamProvider("GameUpdatesStreamProvider");
-            var stream = streamProvider.GetStream<GameStatusDto>(gameId.Value, "GameUpdates");
+            var streamProvider = clusterClient.GetStreamProvider(Constants.GameUpdatesStreamProviderName);
+            var stream = streamProvider.GetStream<GameStatusDto>(gameId.Value, Constants.GameUpdatesStreamName);
             var observer = new GameObserver();
             await stream.SubscribeAsync((newState, token) =>
             {
@@ -181,8 +181,8 @@ namespace OrleanPG.Client
         {
             var game = clusterClient.GetGrain<IGame>(gameId.Value);
 
-            var streamProvider = clusterClient.GetStreamProvider("GameUpdatesStreamProvider");
-            var stream = streamProvider.GetStream<GameStatusDto>(gameId.Value, "GameUpdates");
+            var streamProvider = clusterClient.GetStreamProvider(Constants.GameUpdatesStreamProviderName);
+            var stream = streamProvider.GetStream<GameStatusDto>(gameId.Value, Constants.GameUpdatesStreamName);
             var observer = new GameObserver();
             await stream.SubscribeAsync((newState, token) =>
             {

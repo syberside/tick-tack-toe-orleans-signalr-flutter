@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrleanPG.Grains.GameLobbyGrain;
 using Orleans.Reminders.AzureStorage;
 using OrleanPG.Grains.Infrastructure;
+using OrleanPG.Grains.Interfaces;
 
 namespace OrleanPG.Silo
 {
@@ -43,13 +44,14 @@ namespace OrleanPG.Silo
             // define the cluster configuration
             var builder = new SiloHostBuilder()
                 .UseLocalhostClustering()
-                .AddAzureQueueStreams("GameUpdatesStreamProvider", cfg =>
+                .AddAzureQueueStreams(Constants.GameUpdatesStreamProviderName, cfg =>
                  {
                      cfg.ConfigureAzureQueue(queueCfg =>
                      {
                          queueCfg.Configure(SetupConnectionString);
                      });
                  })
+                //PubSubStore is required for Queue streaming
                 .AddMemoryGrainStorage("PubSubStore")
                 .UseAzureTableReminderService(SetupConnectionString)
                 .AddAzureTableGrainStorage("game_states_store", SetupStore)

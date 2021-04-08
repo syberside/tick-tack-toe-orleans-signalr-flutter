@@ -6,7 +6,7 @@ namespace OrleanPG.Grains.Interfaces
 {
     public static class Constants
     {
-        public static string GameUpdatesStreamProviderName = "GameUpdatesStreamProvider";
-        public static string GameUpdatesStreamName = "GameUpdates";
+        public const string GameUpdatesStreamProviderName = "GameUpdatesStreamProvider";
+        public const string GameUpdatesStreamName = "GameUpdates";
     }
 }

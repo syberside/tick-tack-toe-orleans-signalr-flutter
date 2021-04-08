@@ -61,6 +61,12 @@ namespace SignalR_PG.WebAPI.Hubs
             var result = await lobbie.TurnAsync(x, y, new AuthorizationToken(authToken));
         }
 
+        public async Task AddBot(Guid gameId, string authenticationToken)
+        {
+            var game = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
+            await game.AddBotAsync(new AuthorizationToken(authenticationToken), new GameId(gameId));
+        }
+
         public async Task Watch(Guid gameId)
         {
             var groupName = GetGroupName(gameId);

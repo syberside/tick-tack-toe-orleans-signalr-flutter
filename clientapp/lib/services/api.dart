@@ -100,13 +100,20 @@ class Api {
     if (_connection == null) {
       throw Error();
     }
-    await _connection?.invoke("Watch", args: [gameId]);
+    await _connection!.invoke("Watch", args: [gameId]);
   }
 
   Future<void> turn(int x, int y, String authToken, String gameId) async {
     if (_connection == null) {
       throw Error();
     }
-    await _connection?.invoke("Turn", args: [x, y, authToken, gameId]);
+    await _connection!.invoke("Turn", args: [x, y, authToken, gameId]);
+  }
+
+  Future<void> addBot(String gameId, String authenticationToken) async {
+    if (_connection == null) {
+      throw Error();
+    }
+    await _connection!.invoke("AddBot", args: [gameId, authenticationToken]);
   }
 }

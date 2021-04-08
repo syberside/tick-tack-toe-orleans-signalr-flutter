@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace OrleanPG.Grains.Interfaces
@@ -46,12 +47,21 @@ namespace OrleanPG.Grains.Interfaces
         {
             return obj is GameMap map && map.ToString() == ToString();
         }
-    }
 
-    public enum CellStatus
-    {
-        Empty = 0,
-        X = 1,
-        O = 2,
+        public (int x, int y)[] GetAvailableCells() => GetAvailableCellsGenerator().ToArray();
+
+        private IEnumerable<(int x, int y)> GetAvailableCellsGenerator()
+        {
+            for (var x = 0; x < GameSize; x++)
+            {
+                for (var y = 0; y < GameSize; y++)
+                {
+                    if (this[x, y] == CellStatus.Empty)
+                    {
+                        yield return (x, y);
+                    }
+                }
+            }
+        }
     }
 }

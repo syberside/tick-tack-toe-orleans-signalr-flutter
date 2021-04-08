@@ -54,6 +54,7 @@ namespace OrleanPG.Silo
                 //PubSubStore is required for Queue streaming
                 .AddMemoryGrainStorage("PubSubStore")
                 .UseAzureTableReminderService(SetupConnectionString)
+                .AddAzureTableGrainStorage("game_bot_state_store", SetupStore)
                 .AddAzureTableGrainStorage("game_states_store", SetupStore)
                 .AddAzureTableGrainStorage("user_states_store", SetupStore)
                 .AddAzureTableGrainStorage("game_state_store", SetupStore)
@@ -68,7 +69,10 @@ namespace OrleanPG.Silo
                 })
                 .ConfigureApplicationParts(parts => parts
                     .AddApplicationPart(typeof(GameLobby).Assembly).WithReferences())
-                .ConfigureServices(services => services.AddSingleton<IGrainIdProvider, GrainIdProvider>());
+                .ConfigureServices(services => services
+                    .AddSingleton<IGrainIdProvider, GrainIdProvider>()
+                    .AddSingleton<Random>((sp)=>new Random(DateTime.Now.Millisecond))
+                    );
 
             var host = builder.Build();
             await host.StartAsync();

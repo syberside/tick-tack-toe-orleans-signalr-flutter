@@ -16,7 +16,7 @@ class GamePage extends StatelessWidget {
         body: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _statusWidget(model),
+            _statusWidget(context, model),
             Table(
               border: TableBorder(
                 horizontalInside: BorderSide(width: 3),
@@ -72,9 +72,12 @@ class GamePage extends StatelessWidget {
     }
   }
 
-  Widget _statusWidget(CurrentGameModel model) {
+  Widget _statusWidget(BuildContext context, CurrentGameModel model) {
     if (!model.generalInfo!.isFilledWithPlayers) {
-      return Text("Waiting for other player to join...");
+      return GestureDetector(
+        child: Text("Waiting for other player. Tap to play with bot"),
+        onTap: () async => await _addBot(context, model),
+      );
     }
     switch (model.status) {
       case GameStatus.XTurn:
@@ -135,5 +138,11 @@ class GamePage extends StatelessWidget {
       default:
         throw UnimplementedError();
     }
+  }
+
+  Future<void> _addBot(BuildContext context, CurrentGameModel model) async {
+    var api = context.read<Api>();
+    var authData = context.read<AuthData>();
+    await api.addBot(model.generalInfo!.gameId, authData.authToken!);
   }
 }

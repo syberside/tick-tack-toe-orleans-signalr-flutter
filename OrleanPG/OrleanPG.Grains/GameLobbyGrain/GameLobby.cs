@@ -2,7 +2,6 @@
 using Orleans;
 using Orleans.Runtime;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,7 +11,6 @@ namespace OrleanPG.Grains.GameLobbyGrain
     {
         private readonly IPersistentState<GamesStorageState> _gameStates;
         private readonly IPersistentState<UserStates> _userStates;
-
         public GameLobby(
               [PersistentState("game_lobby_game_states", "game_states_store")] IPersistentState<GamesStorageState> gameStates,
               [PersistentState("game_lobby_user_states", "user_states_store")] IPersistentState<UserStates> userStates)
@@ -89,5 +87,16 @@ namespace OrleanPG.Grains.GameLobbyGrain
         }
 
         private string? TryGetUserName(AuthorizationToken? token) => token == null ? null : _userStates.State.AuthorizedUsers[token];
+
+        /// <summary>
+        /// TODO: add unit tests
+        /// </summary>
+        public async Task AddBotAsync(AuthorizationToken owner, GameId gameId)
+        {
+            var token = await AuthorizeAsync($"Bot_{gameId.Value}");
+            var bot = GrainFactory.GetGrain<IGameBot>(gameId.Value);
+            var playForX = await JoinGameAsync(token, gameId);
+            await bot.InitAsync(token, playForX);
+        }
     }
 }

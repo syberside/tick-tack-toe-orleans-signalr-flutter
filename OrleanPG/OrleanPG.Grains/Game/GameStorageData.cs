@@ -1,6 +1,6 @@
 ﻿using OrleanPG.Grains.Interfaces;
 
-namespace OrleanPG.Grains.GameGrain
+namespace OrleanPG.Grains.Game
 {
     public record GameStorageData(AuthorizationToken? XPlayer, AuthorizationToken? OPlayer, GameState Status, GameMap Map)
     {

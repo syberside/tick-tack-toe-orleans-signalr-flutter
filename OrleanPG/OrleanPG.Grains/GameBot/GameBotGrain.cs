@@ -10,14 +10,14 @@ using System;
 namespace OrleanPG.Grains.GameBot
 {
     [ImplicitStreamSubscription(Constants.GameUpdatesStreamName)]
-    public class GameBot : Grain, IGameBot
+    public class GameBotGrain : Grain, IGameBot
     {
         private readonly IGrainIdProvider _grainIdProvider;
         private readonly IPersistentState<GameBotStorageData> _botData;
         private readonly Random _random;
         private StreamSubscriptionHandle<GameStatusDto>? _subscriptionHandlle;
 
-        public GameBot(
+        public GameBotGrain(
             [PersistentState("game_bot_state", "game_bot_state_store")] IPersistentState<GameBotStorageData> botData,
             IGrainIdProvider grainIdProvider,
             Random random)
@@ -35,7 +35,7 @@ namespace OrleanPG.Grains.GameBot
             _subscriptionHandlle = await stream.SubscribeAsync(OnGameUpdated);
         }
 
-        private async Task OnGameUpdated(GameStatusDto update, StreamSequenceToken token)
+        internal async Task OnGameUpdated(GameStatusDto update, StreamSequenceToken token)
         {
             if (_botData.State.Token == null)
             {
@@ -43,7 +43,6 @@ namespace OrleanPG.Grains.GameBot
                 return;
             }
             var grainId = _grainIdProvider.GetGrainId(this);
-            var game = GrainFactory.GetGrain<IGame>(grainId);
 
             if (update.Status.IsEndStatus())
             {
@@ -60,6 +59,8 @@ namespace OrleanPG.Grains.GameBot
 
             (int x, int y) = GetNextTurn(update);
             var authToken = _botData.State.Token;
+
+            var game = GrainFactory.GetGrain<IGame>(grainId);
             await game.TurnAsync(x, y, authToken);
         }
 
@@ -81,6 +82,10 @@ namespace OrleanPG.Grains.GameBot
 
         public async Task InitAsync(AuthorizationToken token, bool playForX)
         {
+            if (token == null)
+            {
+                throw new ArgumentNullException();
+            }
             await WriteStateUpdate(new GameBotStorageData(token, playForX));
         }
 
@@ -89,5 +94,16 @@ namespace OrleanPG.Grains.GameBot
             _botData.State = update;
             await _botData.WriteStateAsync();
         }
+
+        /// <summary>
+        /// NOTE: Required for unit tests
+        /// </summary>
+        public virtual new IStreamProvider GetStreamProvider(string name) => base.GetStreamProvider(name);
+
+        /// <summary>
+        /// NOTE: Required for unit tests
+        /// </summary>
+        public virtual new IGrainFactory GrainFactory => base.GrainFactory;
+
     }
 }

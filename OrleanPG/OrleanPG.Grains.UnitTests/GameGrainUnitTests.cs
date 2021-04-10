@@ -1,7 +1,7 @@
 ﻿using AutoFixture.Xunit2;
 using FluentAssertions;
 using Moq;
-using OrleanPG.Grains.GameGrain;
+using OrleanPG.Grains.Game;
 using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
@@ -13,22 +13,21 @@ using Xunit;
 
 namespace OrleanPG.Grains.UnitTests
 {
-    public class GameUnitTests
+    public class GameGrainUnitTests
     {
         private readonly Mock<IPersistentState<GameStorageData>> _storeMock;
-        private readonly Mock<Game> _mockedGame;
+        private readonly Mock<GameGrain> _mockedGame;
         private readonly Mock<IGrainIdProvider> _idProviderMock;
-        private readonly Game _game;
+        private readonly GameGrain _game;
 
 
-        public GameUnitTests()
+        public GameGrainUnitTests()
         {
             _storeMock = PersistanceHelper.CreateAndSetupStateWriteMock<GameStorageData>();
             _idProviderMock = new();
-            _mockedGame = new Mock<Game>(() => new Game(_storeMock.Object, _idProviderMock.Object));
+            _mockedGame = new Mock<GameGrain>(() => new GameGrain(_storeMock.Object, _idProviderMock.Object));
             // suppress base RegisterOrUpdateReminder calls
             _mockedGame.Setup(x => x.RegisterOrUpdateReminder(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>())).ReturnsAsync((IGrainReminder)null);
-            // TODO: Check
             _mockedGame.Setup(x => x.GetStreamProvider(It.IsAny<string>())).Returns(new Mock<IStreamProvider>() { DefaultValue = DefaultValue.Mock }.Object);
             _game = _mockedGame.Object;
         }
@@ -98,7 +97,7 @@ namespace OrleanPG.Grains.UnitTests
         {
             await _game.StartAsync(playerX, playerO);
 
-            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(Game.TimeoutCheckReminderName, Game.TimeoutPeriod, Game.TimeoutPeriod));
+            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(GameGrain.TimeoutCheckReminderName, GameGrain.TimeoutPeriod, GameGrain.TimeoutPeriod));
         }
         #endregion
 
@@ -116,7 +115,7 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
 
 
-            Func<Task> act = async () => await _game.TurnAsync(Game.GameSize, y, tokenX);
+            Func<Task> act = async () => await _game.TurnAsync(GameGrain.GameSize, y, tokenX);
 
             await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
         }
@@ -126,7 +125,7 @@ namespace OrleanPG.Grains.UnitTests
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
 
-            Func<Task> act = async () => await _game.TurnAsync(x, Game.GameSize, tokenX);
+            Func<Task> act = async () => await _game.TurnAsync(x, GameGrain.GameSize, tokenX);
 
             await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
         }
@@ -134,8 +133,8 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task TurnAsync_OnCellAlreadyUsed_Throws(int x, int y, AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            x %= Game.GameSize;
-            y %= Game.GameSize;
+            x %= GameGrain.GameSize;
+            y %= GameGrain.GameSize;
             _storeMock.Object.State.Map[x, y] = CellStatus.X;
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
 
@@ -207,7 +206,7 @@ namespace OrleanPG.Grains.UnitTests
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
 
-            var status = await _game.TurnAsync(0, Game.GameSize - 1, tokenX);
+            var status = await _game.TurnAsync(0, GameGrain.GameSize - 1, tokenX);
 
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);
@@ -224,7 +223,7 @@ namespace OrleanPG.Grains.UnitTests
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
 
-            var status = await _game.TurnAsync(Game.GameSize - 1, 0, tokenX);
+            var status = await _game.TurnAsync(GameGrain.GameSize - 1, 0, tokenX);
 
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);
@@ -241,7 +240,7 @@ namespace OrleanPG.Grains.UnitTests
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
 
-            var status = await _game.TurnAsync(Game.GameSize - 1, Game.GameSize - 1, tokenX);
+            var status = await _game.TurnAsync(GameGrain.GameSize - 1, GameGrain.GameSize - 1, tokenX);
 
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);
@@ -260,7 +259,7 @@ namespace OrleanPG.Grains.UnitTests
 
 
 
-            var status = await _game.TurnAsync(Game.GameSize - 1, 0, tokenX);
+            var status = await _game.TurnAsync(GameGrain.GameSize - 1, 0, tokenX);
 
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);
@@ -273,7 +272,7 @@ namespace OrleanPG.Grains.UnitTests
 
             await _game.TurnAsync(0, 0, tokenX);
 
-            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(Game.TimeoutCheckReminderName, Game.TimeoutPeriod, Game.TimeoutPeriod));
+            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(GameGrain.TimeoutCheckReminderName, GameGrain.TimeoutPeriod, GameGrain.TimeoutPeriod));
         }
 
         [Theory, AutoData]
@@ -283,7 +282,7 @@ namespace OrleanPG.Grains.UnitTests
 
             await _game.TurnAsync(0, 0, tokenO);
 
-            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(Game.TimeoutCheckReminderName, Game.TimeoutPeriod, Game.TimeoutPeriod));
+            _mockedGame.Verify(x => x.RegisterOrUpdateReminder(GameGrain.TimeoutCheckReminderName, GameGrain.TimeoutPeriod, GameGrain.TimeoutPeriod));
         }
 
         [Theory, AutoData]
@@ -313,11 +312,11 @@ namespace OrleanPG.Grains.UnitTests
         public async Task ReceiveReminder_OnGameInEndState_CancelsReminder(GameState gameState)
         {
             var reminderMock = new Mock<IGrainReminder>();
-            _mockedGame.Setup(x => x.GetReminder(Game.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
+            _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             var _game = _mockedGame.Object;
             _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
 
-            await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
+            await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
             _storeMock.Object.State.Status.Should().Be(gameState);
             _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
@@ -330,10 +329,10 @@ namespace OrleanPG.Grains.UnitTests
         public async Task ReceiveReminder_OnGameInNotEndState_EndsGame(GameState gameState)
         {
             var reminderMock = new Mock<IGrainReminder>();
-            _mockedGame.Setup(x => x.GetReminder(Game.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
+            _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
 
-            await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
+            await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
             _storeMock.Object.State.Status.Should().Be(GameState.TimedOut);
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
@@ -345,10 +344,10 @@ namespace OrleanPG.Grains.UnitTests
         public async Task ReceiveReminder_OnGameInNotEndState_CancelsReminder(GameState gameState)
         {
             var reminderMock = new Mock<IGrainReminder>();
-            _mockedGame.Setup(x => x.GetReminder(Game.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
+            _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
 
-            await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
+            await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
             _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
         }
@@ -362,7 +361,7 @@ namespace OrleanPG.Grains.UnitTests
             var _game = _mockedGame.Object;
             _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
 
-            await _game.ReceiveReminder(Game.TimeoutCheckReminderName, new TickStatus());
+            await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
             streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.TimedOut, new GameMap()), null), Times.Once);
         }

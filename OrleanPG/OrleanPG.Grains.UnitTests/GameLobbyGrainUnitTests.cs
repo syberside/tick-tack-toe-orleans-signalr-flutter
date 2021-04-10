@@ -14,19 +14,19 @@ using System.Collections.Generic;
 
 namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
 {
-    public class GameLobbyUnitTests
+    public class GameLobbyGrainUnitTests
     {
         private readonly IGameLobby _lobby;
         private readonly Mock<IPersistentState<GamesStorageState>> _gamesStateMock;
         private readonly Mock<IPersistentState<UserStates>> _userStatesMock;
 
 
-        public GameLobbyUnitTests()
+        public GameLobbyGrainUnitTests()
         {
             _gamesStateMock = PersistanceHelper.CreateAndSetupStateWriteMock<GamesStorageState>();
             _userStatesMock = PersistanceHelper.CreateAndSetupStateWriteMock<UserStates>();
 
-            _lobby = new GameLobby(_gamesStateMock.Object, _userStatesMock.Object);
+            _lobby = new GameLobbyGrain(_gamesStateMock.Object, _userStatesMock.Object);
         }
 
         #region AuthorizeAsync
@@ -105,9 +105,9 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
         #endregion
 
         #region JoinGame
-        private GameLobby CreateWrappedLobbyWithGrainInitializerSetup(GameId gameId, out Mock<IGameInitializer> initializerMock)
+        private GameLobbyGrain CreateWrappedLobbyWithGrainInitializerSetup(GameId gameId, out Mock<IGameInitializer> initializerMock)
         {
-            var wrappedLobby = new Mock<GameLobby>(() => new GameLobby(_gamesStateMock.Object, _userStatesMock.Object));
+            var wrappedLobby = new Mock<GameLobbyGrain>(() => new GameLobbyGrain(_gamesStateMock.Object, _userStatesMock.Object));
             var lobby = wrappedLobby.Object;
             var factoryMock = new Mock<IGrainFactory>();
             initializerMock = new Mock<IGameInitializer>();

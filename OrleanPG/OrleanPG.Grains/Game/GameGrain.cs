@@ -6,9 +6,9 @@ using Orleans.Streams;
 using System;
 using System.Threading.Tasks;
 
-namespace OrleanPG.Grains.GameGrain
+namespace OrleanPG.Grains.Game
 {
-    public class Game : Grain, IGame, IGameInitializer
+    public class GameGrain : Grain, IGame, IGameInitializer
     {
         private readonly IPersistentState<GameStorageData> _gameState;
         private readonly IGrainIdProvider _grainIdProvider;
@@ -19,7 +19,7 @@ namespace OrleanPG.Grains.GameGrain
         private const int _maxIndex = GameSize - 1;
 
 
-        public Game(
+        public GameGrain(
             [PersistentState("game_game_state", "game_state_store")] IPersistentState<GameStorageData> gameState,
             IGrainIdProvider grainIdProvider)
         {

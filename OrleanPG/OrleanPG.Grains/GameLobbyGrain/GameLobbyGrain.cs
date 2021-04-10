@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace OrleanPG.Grains.GameLobbyGrain
 {
-    public class GameLobby : Grain, IGameLobby
+    public class GameLobbyGrain : Grain, IGameLobby
     {
         private readonly IPersistentState<GamesStorageState> _gameStates;
         private readonly IPersistentState<UserStates> _userStates;
-        public GameLobby(
+        public GameLobbyGrain(
               [PersistentState("game_lobby_game_states", "game_states_store")] IPersistentState<GamesStorageState> gameStates,
               [PersistentState("game_lobby_user_states", "user_states_store")] IPersistentState<UserStates> userStates)
         {

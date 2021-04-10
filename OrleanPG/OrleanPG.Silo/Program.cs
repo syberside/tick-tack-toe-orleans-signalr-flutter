@@ -68,10 +68,10 @@ namespace OrleanPG.Silo
                     logging.AddConsole();
                 })
                 .ConfigureApplicationParts(parts => parts
-                    .AddApplicationPart(typeof(GameLobby).Assembly).WithReferences())
+                    .AddApplicationPart(typeof(GameLobbyGrain).Assembly).WithReferences())
                 .ConfigureServices(services => services
                     .AddSingleton<IGrainIdProvider, GrainIdProvider>()
-                    .AddSingleton<Random>((sp)=>new Random(DateTime.Now.Millisecond))
+                    .AddSingleton<Random>((sp) => new Random(DateTime.Now.Millisecond))
                     );
 
             var host = builder.Build();

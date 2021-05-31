@@ -1,20 +1,35 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# Introduction
+This project is a playground to try the following technologies:
+* Azure
+* Microsoft Orleans
+* SinglaR
+* Flutter
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+# Project structure
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+```
+./
+|-- /OrleanPG - Backend application
+|   |-- /OrleanPG.Cient - Console client application. Functionality: create game, list games, play game, etc.
+|   |-- /OrleanPG.Grains - Grains implementation
+|   |   |-- /Game - Game Grain and state storage model. Implements logic for game and game intialization.
+|   |   |-- /GameBot - Game Bot Grain and state storage model. Implements logic for playing with bot (choose random position on each turn).
+|   |   *-- /GameLobbyGrain - Game Lobby Grain and state storage models. Implements logic for pseudo authorization, game creation and adding bot to game.
+|   |-- /OrleanPG.Grains.Interfaces - Grain interfaces
+|   |-- /OrleanPG.Grains.UnitTests - unit tests for grains. Yep, I cover my code with tests even for pet-projects ;)
+|   |-- /OrleanPG.Silo - grains host
+|   *-- /SinglaR_PG.WebAPI - API endpoint for clients
+|-- /clientapp - Mobile client written in Flutter
+```
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+# How to run
+* Replace connection string with your Azure storage access key (yep, this should be moved to config obviously). Hardcoded access key is revoked already.
+* Run Flutter client
+* Run OrleanPG.Silo
+* Run SinglaR_PG.WebAPI
+At that moment you can "login" in mobile app, create game and play with a bot.
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+Optionally you may run console client (OrleanPG.Cient), join the game and play versus yourself. 
+
+# General note
+Please don't judge strictly, project was written in spare time and frozen in the middle.

@@ -16,6 +16,7 @@ namespace OrleanPG.Silo
     {
         /// <summary>
         /// TODO: Unsecure, should be moved to configuration out of repository. Token should be revoked and replaced with new one.
+        /// Upd: token revoked, have to move this to config and create new one
         /// </summary>
         private const string ConnectionString = "DefaultEndpointsProtocol=https;AccountName=ticktactorstorage;AccountKey=fZ88n7XGOZiAMvvgKJawqQqqaHV47bNNfd3V3WckvJue0HezVu5VPWli4gi0IRWZ3wiMn0li5rIp5ArcmHHdrA==;EndpointSuffix=core.windows.net";
 

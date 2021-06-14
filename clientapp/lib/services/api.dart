@@ -5,31 +5,25 @@ import 'package:clientapp/pages/lobbies_page.dart';
 import 'package:http/io_client.dart';
 import 'package:signalr_core/signalr_core.dart';
 import 'dart:io';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+
+import 'api_config.dart';
 
 class Api {
-  Api() {
-    print("API CREATED");
-  }
+  final ApiConfig _apiConfig;
   HubConnection? _connection;
-  StreamController<GameStatusDto> _gameUpdatesCtrl =
-      StreamController.broadcast(sync: false);
+  StreamController<GameStatusDto> _gameUpdatesCtrl = StreamController.broadcast(sync: false);
+
+  Api(this._apiConfig);
 
   Stream<GameStatusDto> get gameUpdates => _gameUpdatesCtrl.stream;
 
   Future<void> connect() async {
-    final host = kIsWeb
-        ? 'localhost'
-        : Platform.isAndroid
-            ? '10.0.2.2'
-            : 'localhost';
+    String url = _apiConfig.gamesHubUrl;
     final connection = HubConnectionBuilder()
         .withUrl(
-            'http://$host:5000/gamesHub',
+            url,
             HttpConnectionOptions(
-              client: IOClient(
-                  HttpClient()..badCertificateCallback = (x, y, z) => true),
+              client: IOClient(HttpClient()..badCertificateCallback = (x, y, z) => true),
               logging: (level, message) => print(message),
             ))
         .build();
@@ -42,11 +36,7 @@ class Api {
       var m = u["gameMap"]["data"] as List<dynamic>;
       var data = GameStatusDto(
         GameStatus.values[u["status"] as int],
-        m
-            .map((r) => (r as List<dynamic>)
-                .map((x) => CellStatus.values[x as int])
-                .toList())
-            .toList(),
+        m.map((r) => (r as List<dynamic>).map((x) => CellStatus.values[x as int]).toList()).toList(),
       );
       _gameUpdatesCtrl.add(data);
       print("Update resended");

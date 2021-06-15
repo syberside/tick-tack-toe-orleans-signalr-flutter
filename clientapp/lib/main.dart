@@ -6,31 +6,29 @@ import 'package:clientapp/services/api.dart';
 import 'package:clientapp/services/api_config.dart';
 import 'package:clientapp/services/api_mock.dart';
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 
 Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        Provider<ApiConfig>(
-          create: (_) => ApiConfig(),
-        ),
+        Provider(create: (_) => Logger()),
+        Provider(create: (_) => ApiConfig()),
         Provider<Api>(
-          create: (context) {
-            var config = context.read<ApiConfig>();
+          create: (ctx) {
+            var config = ctx.read<ApiConfig>();
             return config.diconnectedMode ? ApiMock() : Api(config);
           },
           dispose: (_, api) => api.disconnect(),
         ),
-        ChangeNotifierProvider<AuthData>(
-          create: (_) => AuthData(),
-        ),
-        ChangeNotifierProvider<GamesListModel>(
-          create: (_) => GamesListModel(),
-        ),
-        ChangeNotifierProvider<CurrentGameModel>(
-          create: (context) => CurrentGameModel(context.read<Api>().gameUpdates),
-        ),
+        ChangeNotifierProvider(create: (_) => AuthData()),
+        ChangeNotifierProvider(create: (_) => GamesListModel()),
+        ChangeNotifierProvider(
+            create: (ctx) => CurrentGameModel(
+                  ctx.read<Api>().gameUpdates,
+                  ctx.read<Logger>(),
+                )),
       ],
       child: MyApp(),
     ),

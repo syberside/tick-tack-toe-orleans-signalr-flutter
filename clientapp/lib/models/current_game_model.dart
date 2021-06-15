@@ -1,13 +1,15 @@
 import 'package:clientapp/pages/lobbies_page.dart';
 import 'package:flutter/foundation.dart';
+import 'package:logger/logger.dart';
 
 class CurrentGameModel extends ChangeNotifier {
+  final Logger _logger;
   UserGameParticipation _participation = UserGameParticipation.readOnly;
   GameStatus? _status;
   List<List<CellStatus>> _gameMap = GameData.createEmptyMap();
   GameGeneralInfo? _generalInfo;
 
-  CurrentGameModel(Stream<GameStatusDto> gameUpdates) {
+  CurrentGameModel(Stream<GameStatusDto> gameUpdates, this._logger) {
     gameUpdates.listen((event) {
       _gameMap = event.gameMap;
       _status = event.status;
@@ -18,7 +20,7 @@ class CurrentGameModel extends ChangeNotifier {
       if (_participation == UserGameParticipation.playForO) {
         _generalInfo!.playerX = "bla";
       }
-      print("Update processed: $event");
+      _logger.i("Update processed: $event");
       notifyListeners();
     });
   }
@@ -29,9 +31,7 @@ class CurrentGameModel extends ChangeNotifier {
   GameGeneralInfo? get generalInfo => _generalInfo;
 
   void makeOptimisticTurn(int i, int j) {
-    _gameMap[i][j] = participation == UserGameParticipation.playForX
-        ? CellStatus.X
-        : CellStatus.O;
+    _gameMap[i][j] = participation == UserGameParticipation.playForX ? CellStatus.X : CellStatus.O;
     _status = status == GameStatus.XTurn ? GameStatus.OTurn : GameStatus.XTurn;
     notifyListeners();
   }
@@ -40,9 +40,7 @@ class CurrentGameModel extends ChangeNotifier {
     //TODO: remove gamedata?
     _gameMap = gameData.gameMap;
     _generalInfo = gameData.generalInfo;
-    _participation = playForX
-        ? UserGameParticipation.playForX
-        : UserGameParticipation.playForO;
+    _participation = playForX ? UserGameParticipation.playForX : UserGameParticipation.playForO;
     _status = GameStatus.XTurn;
     notifyListeners();
   }

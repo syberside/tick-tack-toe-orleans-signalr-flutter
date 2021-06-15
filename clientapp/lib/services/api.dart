@@ -3,17 +3,19 @@ import 'dart:async';
 import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/pages/lobbies_page.dart';
 import 'package:http/io_client.dart';
+import 'package:logger/logger.dart';
 import 'package:signalr_core/signalr_core.dart';
 import 'dart:io';
 
 import 'api_config.dart';
 
 class Api {
+  final Logger _logger;
   final ApiConfig _apiConfig;
   HubConnection? _connection;
   StreamController<GameStatusDto> _gameUpdatesCtrl = StreamController.broadcast(sync: false);
 
-  Api(this._apiConfig);
+  Api(this._apiConfig, this._logger);
 
   Stream<GameStatusDto> get gameUpdates => _gameUpdatesCtrl.stream;
 
@@ -24,14 +26,14 @@ class Api {
             url,
             HttpConnectionOptions(
               client: IOClient(HttpClient()..badCertificateCallback = (x, y, z) => true),
-              logging: (level, message) => print(message),
+              logging: (level, message) => _logger.d(message),
             ))
         .build();
 
     await connection.start();
     connection.on('GameUpdated', (message) {
       //TODO: filter for current game
-      print("Received update: $message");
+      _logger.i("Received update: $message");
       var u = (message as List<dynamic>).first;
       var m = u["gameMap"]["data"] as List<dynamic>;
       var data = GameStatusDto(
@@ -39,7 +41,7 @@ class Api {
         m.map((r) => (r as List<dynamic>).map((x) => CellStatus.values[x as int]).toList()).toList(),
       );
       _gameUpdatesCtrl.add(data);
-      print("Update resended");
+      _logger.i("Update resended");
     });
 
     _connection = connection;
@@ -82,7 +84,7 @@ class Api {
       token,
       playForX,
     ]);
-    print("Created game: $result");
+    _logger.i("Created game: $result");
     return result as String;
   }
 

@@ -18,7 +18,7 @@ Future<void> main() async {
         Provider<Api>(
           create: (ctx) {
             var config = ctx.read<ApiConfig>();
-            return config.diconnectedMode ? ApiMock() : Api(config);
+            return config.diconnectedMode ? ApiMock() : Api(config, ctx.read<Logger>());
           },
           dispose: (_, api) => api.disconnect(),
         ),

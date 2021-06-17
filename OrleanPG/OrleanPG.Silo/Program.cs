@@ -9,34 +9,26 @@ using OrleanPG.Grains.GameLobbyGrain;
 using Orleans.Reminders.AzureStorage;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
+using Microsoft.Extensions.Configuration;
 
 namespace OrleanPG.Silo
 {
     class Program
     {
-        /// <summary>
-        /// TODO: Unsecure, should be moved to configuration out of repository. Token should be revoked and replaced with new one.
-        /// Upd: token revoked, have to move this to config and create new one
-        /// </summary>
-        private const string ConnectionString = "DefaultEndpointsProtocol=https;AccountName=ticktactorstorage;AccountKey=fZ88n7XGOZiAMvvgKJawqQqqaHV47bNNfd3V3WckvJue0HezVu5VPWli4gi0IRWZ3wiMn0li5rIp5ArcmHHdrA==;EndpointSuffix=core.windows.net";
-
+        private static string ConnectionString;
         public static async Task<int> Main(string[] args)
         {
-            try
-            {
-                var host = await StartSilo();
-                Console.WriteLine("\n\n Press Enter to terminate...\n\n");
-                Console.ReadLine();
+            var builder = new ConfigurationBuilder()
+                .AddJsonFile($"appsettings.json", true, true);
+            var config = builder.Build();
+            ConnectionString = config.GetConnectionString("AzureStorage");
+            var host = await StartSilo();
+            Console.WriteLine("\n\n Press Enter to terminate...\n\n");
+            Console.ReadLine();
 
-                await host.StopAsync();
+            await host.StopAsync();
 
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                return 1;
-            }
+            return 0;
         }
 
 
@@ -72,7 +64,7 @@ namespace OrleanPG.Silo
                     .AddApplicationPart(typeof(GameLobbyGrain).Assembly).WithReferences())
                 .ConfigureServices(services => services
                     .AddSingleton<IGrainIdProvider, GrainIdProvider>()
-                    .AddSingleton<Random>((sp) => new Random(DateTime.Now.Millisecond))
+                    .AddSingleton((sp) => new Random(DateTime.Now.Millisecond))
                     );
 
             var host = builder.Build();

@@ -8,13 +8,13 @@
         "OrleanPG.Client": {}
       }
     },
-    "Server + API client": {
+    "Server + API Host": {
       "Projects": {
         "OrleanPG.Silo": {},
         "SignalR_PG.WebAPI": {}
       }
     },
-    "Server + Clients": {
+    "Server + API Host + Client": {
       "Projects": {
         "OrleanPG.Silo": {},
         "OrleanPG.Client": {},

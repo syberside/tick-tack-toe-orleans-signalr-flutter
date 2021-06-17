@@ -18,25 +18,17 @@ namespace OrleanPG.Silo
         private static string ConnectionString;
         public static async Task<int> Main(string[] args)
         {
-            try
-            {
-                var builder = new ConfigurationBuilder()
-                    .AddJsonFile($"appsettings.json", true, true);
-                var config = builder.Build();
-                var connectionString = config.GetConnectionString("AzureStorage");
-                var host = await StartSilo();
-                Console.WriteLine("\n\n Press Enter to terminate...\n\n");
-                Console.ReadLine();
+            var builder = new ConfigurationBuilder()
+                .AddJsonFile($"appsettings.json", true, true);
+            var config = builder.Build();
+            ConnectionString = config.GetConnectionString("AzureStorage");
+            var host = await StartSilo();
+            Console.WriteLine("\n\n Press Enter to terminate...\n\n");
+            Console.ReadLine();
 
-                await host.StopAsync();
+            await host.StopAsync();
 
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                return 1;
-            }
+            return 0;
         }
 
 

@@ -1,4 +1,4 @@
-import 'package:clientapp/models/auth_model.dart';
+import 'package:clientapp/models/user_model.dart';
 import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/models/games_list_model.dart';
 import 'package:clientapp/pages/game_page.dart';
@@ -39,13 +39,13 @@ class LobbiesPage extends StatelessWidget {
       return;
     }
     var api = context.read<Api>();
-    var token = context.read<AuthData>().authToken;
+    var token = context.read<UserModel>().authToken;
     var gameId = await api.createGame(token!, playForX);
     // TODO: Subscribe for game updates
     // TODO: On update begin game
     // TODO: optimistic update for lobbies list
     await api.subscribeForChanges(gameId);
-    var username = context.read<AuthData>().username;
+    var username = context.read<UserModel>().username;
     var gameData = GameData.createdByUser(username!, playForX, gameId);
     var currentGameModel = context.read<CurrentGameModel>();
     currentGameModel.newGameCreated(gameData, playForX);

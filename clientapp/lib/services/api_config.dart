@@ -14,5 +14,5 @@ class ApiConfig {
   }
 
   /// Set tru to use stub for BE integration
-  bool diconnectedMode = true;
+  bool diconnectedMode = false;
 }

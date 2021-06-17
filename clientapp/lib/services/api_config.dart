@@ -1,7 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-/// TODO: Replace with config file
 class ApiConfig {
   String get gamesHubUrl {
     final host = kIsWeb
@@ -12,7 +11,4 @@ class ApiConfig {
     var url = 'http://$host:5000/gamesHub';
     return url;
   }
-
-  /// Set tru to use stub for BE integration
-  bool diconnectedMode = false;
 }

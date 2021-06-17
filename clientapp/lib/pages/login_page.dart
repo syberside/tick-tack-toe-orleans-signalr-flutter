@@ -1,4 +1,4 @@
-import 'package:clientapp/models/auth_model.dart';
+import 'package:clientapp/models/user_model.dart';
 import 'package:clientapp/pages/lobbies_page.dart';
 import 'package:clientapp/services/api.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
     await api.connect();
     var username = _inputCtrl.text;
     var authCode = await api.login(username);
-    context.read<AuthData>().update(authCode, username);
+    context.read<UserModel>().update(authCode, username);
     // TODO: handle errors and timeouts
     Navigator.pushReplacement(
       context,

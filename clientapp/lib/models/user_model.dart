@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-class AuthData with ChangeNotifier {
+class UserModel with ChangeNotifier {
   String? _authToken;
   String? _username;
 

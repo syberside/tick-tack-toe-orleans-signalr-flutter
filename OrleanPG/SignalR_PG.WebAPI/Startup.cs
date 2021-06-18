@@ -11,6 +11,7 @@ using Orleans.Configuration;
 using Newtonsoft.Json.Serialization;
 using Orleans.Hosting;
 using OrleanPG.Grains.Interfaces;
+using System.Threading.Tasks;
 
 namespace SignalR_PG.WebAPI
 {
@@ -68,10 +69,13 @@ namespace SignalR_PG.WebAPI
                 })
                 .ConfigureLogging(logging => logging.AddConsole())
                 .Build();
-
-            //TODO: Make async
-            client.Connect().Wait();
             return client;
+        }
+
+        public static async Task InitServicesAsync(IHost host)
+        {
+            var clusterClient = host.Services.GetRequiredService<IClusterClient>();
+            await clusterClient.Connect();
         }
     }
 }

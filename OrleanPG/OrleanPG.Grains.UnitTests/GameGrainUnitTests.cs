@@ -28,8 +28,10 @@ namespace OrleanPG.Grains.UnitTests
             _idProviderMock = new();
             _mockedGame = new Mock<GameGrain>(() => new GameGrain(_storeMock.Object, _idProviderMock.Object));
             // suppress base RegisterOrUpdateReminder calls
-            _mockedGame.Setup(x => x.RegisterOrUpdateReminder(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>())).ReturnsAsync((IGrainReminder)null);
-            _mockedGame.Setup(x => x.GetStreamProvider(It.IsAny<string>())).Returns(new Mock<IStreamProvider>() { DefaultValue = DefaultValue.Mock }.Object);
+            _mockedGame.Setup(x => x.RegisterOrUpdateReminder(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()))
+                .ReturnsAsync(new Mock<IGrainReminder>().Object);
+            _mockedGame.Setup(x => x.GetStreamProvider(It.IsAny<string>()))
+                .Returns(new Mock<IStreamProvider>() { DefaultValue = DefaultValue.Mock }.Object);
 
             _game = _mockedGame.Object;
         }
@@ -81,14 +83,18 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task StartAsync_OnXPlayerNull_Throws(AuthorizationToken tokenO)
         {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             Func<Task> act = async () => await _game.StartAsync(null, tokenO);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
             await act.Should().ThrowAsync<ArgumentNullException>();
         }
 
         [Theory, AutoData]
         public async Task StartAsync_OnOPlayerNull_Throws(AuthorizationToken tokenX)
         {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             Func<Task> act = async () => await _game.StartAsync(tokenX, null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
             await act.Should().ThrowAsync<ArgumentNullException>();
         }
 
@@ -400,7 +406,7 @@ namespace OrleanPG.Grains.UnitTests
             lobbyMock.Setup(x => x.ResolveUserNamesAsync(tokens)).ReturnsAsync(userNames);
             grainFactoryMock.Setup(x => x.GetGrain<IGameLobby>(Guid.Empty, It.IsAny<string>())).Returns(lobbyMock.Object);
         }
-        private void SetupAuthorizationTokens(AuthorizationToken? tokenX = null, AuthorizationToken? tokenO = null, string nameX = null, string nameO = null)
+        private void SetupAuthorizationTokens(AuthorizationToken? tokenX = null, AuthorizationToken? tokenO = null, string? nameX = null, string? nameO = null)
             => SetupAuthorizationTokens(new AuthorizationToken?[] { tokenX, tokenO }, new string?[] { nameX, nameO });
 
         #endregion

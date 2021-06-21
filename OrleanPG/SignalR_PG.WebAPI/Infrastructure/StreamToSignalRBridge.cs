@@ -10,7 +10,7 @@ namespace SignalR_PG.WebAPI.Infrastructure
     {
         private readonly IClientProxy _clientProxy;
         private readonly IAsyncStream<GameStatusDto> _stream;
-        private StreamSubscriptionHandle<GameStatusDto> _handle;
+        private StreamSubscriptionHandle<GameStatusDto>? _handle;
 
         public StreamToSignalRBridge(IAsyncStream<GameStatusDto> from, IClientProxy to)
         {

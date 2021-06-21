@@ -43,7 +43,7 @@ namespace SignalR_PG.WebAPI.Hubs
             {
                 playerX = x.XPlayerName,
                 playerO = x.OPlayerName,
-                gameId = x.Id.Value.ToString(),
+                gameId = x.Id?.Value.ToString(),
             }).ToArray();
         }
 
@@ -87,7 +87,10 @@ namespace SignalR_PG.WebAPI.Hubs
         public async Task Unwatch(Guid gameId)
         {
             _subscriptions.Remove(gameId, out var subscr);
-            await subscr.DisposeAsync();
+            if (subscr != null)
+            {
+                await subscr.DisposeAsync();
+            }
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupName(gameId));
         }
     }

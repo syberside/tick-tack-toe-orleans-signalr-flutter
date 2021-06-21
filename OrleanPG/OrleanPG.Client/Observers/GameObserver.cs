@@ -1,5 +1,4 @@
 ﻿using OrleanPG.Grains.Interfaces;
-using Orleans.Streams;
 using System;
 
 namespace OrleanPG.Client.Observers
@@ -7,7 +6,7 @@ namespace OrleanPG.Client.Observers
     public class GameObserver
     {
         public bool IsUpdated { get; set; }
-        public GameStatusDto LastUpdate { get; private set; }
+        public GameStatusDto? LastUpdate { get; private set; }
         public void GameStateUpdated(GameStatusDto newState)
         {
             Console.WriteLine("Game udpated:");

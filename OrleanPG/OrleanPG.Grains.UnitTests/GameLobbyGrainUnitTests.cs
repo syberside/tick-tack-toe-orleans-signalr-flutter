@@ -50,7 +50,9 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
         [Fact]
         public async Task AuthorizeAsync_OnNullUserName_Throws()
         {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             Func<Task> act = async () => await _lobby.AuthorizeAsync(null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
             await act.Should().ThrowAsync<ArgumentNullException>();
         }
@@ -91,7 +93,9 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
         [Theory, AutoData]
         public async Task CreateGameAsync_OnNullUserToken_Throws(bool playForX)
         {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             Func<Task> act = async () => await _lobby.CreateGameAsync(null, playForX);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
             await act.Should().ThrowAsync<ArgumentException>();
         }
@@ -159,7 +163,9 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
             _userStatesMock.Object.State.AuthorizedUsers.Add(tokenX, usernameX);
             _gamesStateMock.Object.State.RegisteredGames.Add(gameId, new GameParticipation(tokenX, null));
 
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             Func<Task> act = async () => await _lobby.JoinGameAsync(null, gameId);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
             await act.Should().ThrowAsync<ArgumentException>();
         }
 
@@ -169,7 +175,9 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
             _userStatesMock.Object.State.AuthorizedUsers.Add(tokenX, usernameX);
             _gamesStateMock.Object.State.RegisteredGames.Add(gameId, new GameParticipation(tokenX, null));
 
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             Func<Task> act = async () => await _lobby.JoinGameAsync(tokenO, null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
             await act.Should().ThrowAsync<ArgumentException>();
         }
 

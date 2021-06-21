@@ -1,21 +1,21 @@
-﻿using Orleans;
-using Orleans.Configuration;
-using Orleans.Hosting;
-using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrleanPG.Grains.GameLobbyGrain;
-using Orleans.Reminders.AzureStorage;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
-using Microsoft.Extensions.Configuration;
+using Orleans;
+using Orleans.Configuration;
+using Orleans.Hosting;
+using Orleans.Reminders.AzureStorage;
+using System;
+using System.Threading.Tasks;
 
 namespace OrleanPG.Silo
 {
     class Program
     {
-        private static string ConnectionString;
+        private static string? ConnectionString;
         public static async Task<int> Main(string[] args)
         {
             var builder = new ConfigurationBuilder()

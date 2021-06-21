@@ -137,8 +137,8 @@ class LobbieWidget extends StatelessWidget {
     var userModel = context.read<UserModel>();
     var api = context.read<Api>();
     var authenticationToken = userModel.authToken!;
-    var currentState = await api.joinGame(gameId, authenticationToken);
     await api.subscribeForChanges(gameId);
+    var currentState = await api.joinGame(gameId, authenticationToken);
 
     final data = GameData(
       currentState.gameMap,

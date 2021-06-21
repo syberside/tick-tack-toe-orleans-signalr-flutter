@@ -23,16 +23,16 @@ namespace SignalR_PG.WebAPI.Hubs
 
         public async Task<string> Login(string username)
         {
-            var lobbie = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
-            var result = await lobbie.AuthorizeAsync(username);
+            var lobby = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
+            var result = await lobby.AuthorizeAsync(username);
             return result.Value;
         }
 
         public async Task<GameGeneralInfoDto[]> GetLobbies()
         {
             //TODO: add subscription to games list update
-            var lobbie = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
-            var result = await lobbie.FindGamesAsync();
+            var lobby = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
+            var result = await lobby.FindGamesAsync();
             return Convert(result);
 
         }
@@ -50,15 +50,15 @@ namespace SignalR_PG.WebAPI.Hubs
         public async Task<string> CreateGame(string authToken, bool playForX)
         {
             //TODO: add subscription to games list update
-            var lobbie = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
-            var result = await lobbie.CreateGameAsync(new AuthorizationToken(authToken), playForX);
+            var lobby = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
+            var result = await lobby.CreateGameAsync(new AuthorizationToken(authToken), playForX);
             return result.Value.ToString();
         }
 
         public async Task Turn(int x, int y, string authToken, Guid gameId)
         {
-            var lobbie = _clusterClient.GetGrain<IGame>(gameId);
-            var result = await lobbie.TurnAsync(x, y, new AuthorizationToken(authToken));
+            var lobby = _clusterClient.GetGrain<IGame>(gameId);
+            var result = await lobby.TurnAsync(x, y, new AuthorizationToken(authToken));
         }
 
         public async Task AddBot(Guid gameId, string authenticationToken)

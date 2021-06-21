@@ -93,10 +93,33 @@ namespace OrleanPG.Grains.GameLobbyGrain
         /// </summary>
         public async Task AddBotAsync(AuthorizationToken owner, GameId gameId)
         {
-            var token = await AuthorizeAsync($"Bot_{gameId.Value}");
+            var token = await AuthorizeAsync($"Bot (random)");
             var bot = GrainFactory.GetGrain<IGameBot>(gameId.Value);
             var playForX = await JoinGameAsync(token, gameId);
             await bot.InitAsync(token, playForX);
+        }
+
+        /// <summary>
+        /// TODO: add unit tests
+        /// </summary>
+        public Task<string?[]> ResolveUserNamesAsync(params AuthorizationToken?[] tokens)
+        {
+            var result = tokens.Select(LookupUserName).ToArray();
+            return Task.FromResult(result);
+        }
+
+        private string? LookupUserName(AuthorizationToken? token)
+        {
+            if (token == null)
+            {
+                return null;
+            }
+            var isKnownUser = _userStates.State.AuthorizedUsers.TryGetValue(token, out var result);
+            if (!isKnownUser)
+            {
+                throw new ArgumentException($"User with token {token} is unknown");
+            }
+            return result;
         }
     }
 }

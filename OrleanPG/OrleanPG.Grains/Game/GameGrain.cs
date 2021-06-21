@@ -36,8 +36,7 @@ namespace OrleanPG.Grains.Game
 
         private async Task NotifyObservers()
         {
-            var update = GetGameStatusDtoFromGameState();
-            //TODO: Move to constant
+            var update = await GetGameStatusDtoFromGameState();
             var streamProvider = GetStreamProvider(Constants.GameUpdatesStreamProviderName);
             var grainId = _grainIdProvider.GetGrainId(this);
             var stream = streamProvider.GetStream<GameStatusDto>(grainId, Constants.GameUpdatesStreamName);
@@ -124,7 +123,7 @@ namespace OrleanPG.Grains.Game
             });
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
 
-            return GetGameStatusDtoFromGameState();
+            return await GetGameStatusDtoFromGameState();
         }
 
         private GameState GetNewStatus(CellStatus status, int x, int y, GameMap gameMap)
@@ -201,7 +200,7 @@ namespace OrleanPG.Grains.Game
 
         private static GameState StepToWinState(CellStatus status) => status == CellStatus.X ? GameState.XWin : GameState.OWin;
 
-        public Task<GameStatusDto> GetStatus() => Task.FromResult(GetGameStatusDtoFromGameState());
+        public Task<GameStatusDto> GetStatus() => GetGameStatusDtoFromGameState();
 
         public async Task ReceiveReminder(string reminderName, TickStatus status)
         {
@@ -251,8 +250,18 @@ namespace OrleanPG.Grains.Game
         /// <summary>
         /// NOTE: Required for unit tests
         /// </summary>
+        public new virtual IGrainFactory GrainFactory => base.GrainFactory;
+
+        /// <summary>
+        /// NOTE: Required for unit tests
+        /// </summary>
         public new virtual IStreamProvider GetStreamProvider(string name) => base.GetStreamProvider(name);
 
-        private GameStatusDto GetGameStatusDtoFromGameState() => new GameStatusDto(_gameState.State.Status, _gameState.State.Map);
+        private async Task<GameStatusDto> GetGameStatusDtoFromGameState()
+        {
+            var lobby = GrainFactory.GetGrain<IGameLobby>(Guid.Empty);
+            var userNames = await lobby.ResolveUserNamesAsync(_gameState.State.XPlayer, _gameState.State.OPlayer);
+            return new GameStatusDto(_gameState.State.Status, _gameState.State.Map, userNames[0], userNames[1]);
+        }
     }
 }

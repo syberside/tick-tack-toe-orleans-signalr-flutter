@@ -39,6 +39,8 @@ class Api {
       var data = GameStatusDto(
         GameStatus.values[u["status"] as int],
         m.map((r) => (r as List<dynamic>).map((x) => CellStatus.values[x as int]).toList()).toList(),
+        u["playerXName"] as String,
+        u["playerOName"] as String,
       );
       _gameUpdatesCtrl.add(data);
       _logger.i("Update resended");

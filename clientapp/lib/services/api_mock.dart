@@ -123,4 +123,10 @@ class ApiMock implements Api {
             : GameStatus.OTurn;
     _pushUpdate(game);
   }
+
+  @override
+  Future<bool> joinGame(String gameId, String authenticationToken) {
+    // TODO: implement joinGame
+    throw UnimplementedError();
+  }
 }

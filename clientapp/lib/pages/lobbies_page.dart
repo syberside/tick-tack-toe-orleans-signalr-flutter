@@ -122,21 +122,31 @@ class LobbieWidget extends StatelessWidget {
               ),
             ),
             data.canParticipate
-                ? ElevatedButton(onPressed: () => _joinGame(context, data), child: Text('Play'))
+                ? ElevatedButton(onPressed: () async => await _joinGame(context, data), child: Text('Play'))
                 : ElevatedButton(onPressed: () => _viewGame(context, data), child: Text('View')),
           ],
         ),
       );
 
-  void _joinGame(BuildContext context, GameGeneralInfo data) {
+  Future<void> _joinGame(BuildContext context, GameGeneralInfo gameInfo) async {
+    var gameId = gameInfo.gameId;
+    var userModel = context.read<UserModel>();
+    var api = context.read<Api>();
+    // TODO: replace with DTO with all required data
+    var playForX = await api.joinGame(gameId, userModel.authToken!);
+    await api.subscribeForChanges(gameId);
+
+    var username = userModel.username;
+    var xName = playForX ? username : gameInfo.playerX;
+    var oName = playForX ? gameInfo.playerO : username;
     final data = GameData([
       [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
       [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
       [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-    ], GameGeneralInfo("10", "x1", "o2"), GameStatus.XTurn);
+    ], GameGeneralInfo(gameId, xName, oName), GameStatus.XTurn);
     var currentGameMode = context.read<CurrentGameModel>();
-    //TODO: call backend to join, use result to understand X or U
-    currentGameMode.join(data, UserGameParticipation.playForX);
+    var participation = playForX ? UserGameParticipation.playForX : UserGameParticipation.playForO;
+    currentGameMode.join(data, participation);
     Navigator.push(context, MaterialPageRoute(builder: (_) => GamePage()));
   }
 

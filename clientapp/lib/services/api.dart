@@ -110,4 +110,12 @@ class Api {
     }
     await _connection!.invoke("AddBot", args: [gameId, authenticationToken]);
   }
+
+  Future<bool> joinGame(String gameId, String authenticationToken) async {
+    if (_connection == null) {
+      throw Error();
+    }
+    var result = await _connection!.invoke("JoinGame", args: [gameId, authenticationToken]);
+    return result;
+  }
 }

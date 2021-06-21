@@ -67,6 +67,13 @@ namespace SignalR_PG.WebAPI.Hubs
             await game.AddBotAsync(new AuthorizationToken(authenticationToken), new GameId(gameId));
         }
 
+        public async Task<bool> JoinGame(Guid gameId, string authToken)
+        {
+            var game = _clusterClient.GetGrain<IGameLobby>(Guid.Empty);
+            var result = await game.JoinGameAsync(new AuthorizationToken(authToken), new GameId(gameId));
+            return result;
+        }
+
         public async Task Watch(Guid gameId)
         {
             var groupName = GetGroupName(gameId);

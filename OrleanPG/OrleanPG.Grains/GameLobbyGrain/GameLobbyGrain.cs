@@ -49,7 +49,7 @@ namespace OrleanPG.Grains.GameLobbyGrain
             }
         }
 
-        public async Task<bool> JoinGameAsync(AuthorizationToken authToken, GameId id)
+        public async Task<GameStatusDto> JoinGameAsync(AuthorizationToken authToken, GameId id)
         {
             ThrowIfUserTokenIsNotValid(authToken);
             if (id == null)
@@ -67,14 +67,14 @@ namespace OrleanPG.Grains.GameLobbyGrain
                 throw new ArgumentException($"Game not found: {id}");
             }
 
-            gameData = gameData.JoinPlayer(authToken, out var playForX);
+            gameData = gameData.JoinPlayer(authToken, out var _);
             _gameStates.State.RegisteredGames[id] = gameData;
             await _gameStates.WriteStateAsync();
-            var init = GrainFactory.GetGrain<IGameInitializer>(id.Value);
+            var gameInitializer = GrainFactory.GetGrain<IGameInitializer>(id.Value);
 #pragma warning disable CS8604 // Possible null reference argument.
-            await init.StartAsync(gameData.XPlayer, gameData.OPlayer);
+            var result = await gameInitializer.StartAsync(gameData.XPlayer, gameData.OPlayer);
 #pragma warning restore CS8604 // Possible null reference argument.
-            return playForX;
+            return result;
 
         }
 
@@ -95,7 +95,9 @@ namespace OrleanPG.Grains.GameLobbyGrain
         {
             var token = await AuthorizeAsync($"Bot (random)");
             var bot = GrainFactory.GetGrain<IGameBot>(gameId.Value);
-            var playForX = await JoinGameAsync(token, gameId);
+            var gameData = _gameStates.State.RegisteredGames[gameId];
+            var playForX = gameData.IsPlayingForX(token);
+            await JoinGameAsync(token, gameId);
             await bot.InitAsync(token, playForX);
         }
 

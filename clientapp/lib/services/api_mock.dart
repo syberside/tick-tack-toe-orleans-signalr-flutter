@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:clientapp/pages/lobbies_page.dart';
+import 'package:clientapp/data/cell_status.dart';
+import 'package:clientapp/data/game_data.dart';
+import 'package:clientapp/data/game_general_info.dart';
+import 'package:clientapp/data/game_status.dart';
 import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/services/api.dart';
 
@@ -125,7 +128,7 @@ class ApiMock implements Api {
   }
 
   @override
-  Future<bool> joinGame(String gameId, String authenticationToken) {
+  Future<GameStatusDto> joinGame(String gameId, String authenticationToken) {
     // TODO: implement joinGame
     throw UnimplementedError();
   }

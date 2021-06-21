@@ -29,6 +29,19 @@ namespace OrleanPG.Grains.GameLobbyGrain
                 return this with { OPlayer = otherPlayer };
             }
         }
+
+        public bool IsPlayingForX(AuthorizationToken token)
+        {
+            if (token == XPlayer)
+            {
+                return true;
+            }
+            if (token == OPlayer)
+            {
+                return false;
+            }
+            throw new ArgumentException($"Token {token} is not a part of game");
+        }
     }
 
 }

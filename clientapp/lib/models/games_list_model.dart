@@ -1,4 +1,4 @@
-import 'package:clientapp/pages/lobbies_page.dart';
+import 'package:clientapp/data/game_general_info.dart';
 import 'package:flutter/foundation.dart';
 
 class GamesListModel extends ChangeNotifier {

@@ -1,7 +1,11 @@
 import 'package:clientapp/models/user_model.dart';
 import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/models/games_list_model.dart';
+import 'package:clientapp/data/cell_status.dart';
+import 'package:clientapp/data/game_data.dart';
+import 'package:clientapp/data/game_general_info.dart';
 import 'package:clientapp/pages/game_page.dart';
+import 'package:clientapp/data/game_status.dart';
 import 'package:clientapp/services/api.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -132,20 +136,17 @@ class LobbieWidget extends StatelessWidget {
     var gameId = gameInfo.gameId;
     var userModel = context.read<UserModel>();
     var api = context.read<Api>();
-    // TODO: replace with DTO with all required data
-    var playForX = await api.joinGame(gameId, userModel.authToken!);
+    var authenticationToken = userModel.authToken!;
+    var currentState = await api.joinGame(gameId, authenticationToken);
     await api.subscribeForChanges(gameId);
 
-    var username = userModel.username;
-    var xName = playForX ? username : gameInfo.playerX;
-    var oName = playForX ? gameInfo.playerO : username;
-    final data = GameData([
-      [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-      [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-      [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-    ], GameGeneralInfo(gameId, xName, oName), GameStatus.XTurn);
+    final data = GameData(
+      currentState.gameMap,
+      GameGeneralInfo(gameId, currentState.playerXName, currentState.playerOName),
+      currentState.status,
+    );
     var currentGameMode = context.read<CurrentGameModel>();
-    var participation = playForX ? UserGameParticipation.playForX : UserGameParticipation.playForO;
+    var participation = gameInfo.posibleParticipation();
     currentGameMode.join(data, participation);
     Navigator.push(context, MaterialPageRoute(builder: (_) => GamePage()));
   }
@@ -161,53 +162,4 @@ class LobbieWidget extends StatelessWidget {
     currentGameModel.view(data);
     Navigator.push(context, MaterialPageRoute(builder: (_) => GamePage()));
   }
-}
-
-class GameGeneralInfo {
-  bool get canParticipate => playerO == null || playerX == null;
-  bool get isFilledWithPlayers => !canParticipate;
-
-  String? playerX;
-  String? playerO;
-  String gameId;
-
-  GameGeneralInfo(this.gameId, this.playerX, this.playerO);
-}
-
-enum GameStatus {
-  XTurn,
-  OTurn,
-  XWin,
-  OWin,
-  Timeout,
-}
-
-enum CellStatus {
-  Empty,
-  X,
-  O,
-}
-
-class GameData {
-  List<List<CellStatus>> gameMap;
-  GameGeneralInfo generalInfo;
-  GameStatus status;
-
-  GameData(this.gameMap, this.generalInfo, this.status);
-
-  GameData.createdByUser(String username, bool playForX, String gameId)
-      : this(
-            createEmptyMap(),
-            GameGeneralInfo(
-              gameId,
-              playForX ? username : null,
-              playForX ? null : username,
-            ),
-            GameStatus.XTurn);
-
-  static List<List<CellStatus>> createEmptyMap() => [
-        [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-        [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-        [CellStatus.Empty, CellStatus.Empty, CellStatus.Empty],
-      ];
 }

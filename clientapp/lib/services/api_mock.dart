@@ -65,6 +65,17 @@ class ApiMock implements Api {
   @override
   Future<String> login(String username) {
     _username = username;
+    // NOTE: adding games for testing purposes
+    _games["1"] = GameData.createdByUser("OtherUser", true, "1");
+    _games["2"] = GameData.createdByUser("OtherUser", false, "2");
+    for (var value in GameStatus.values) {
+      _games[value.toString()] = GameData(
+        GameData.createEmptyMap(),
+        GameGeneralInfo(value.toString(), "Bob", "Jack"),
+        value,
+      );
+    }
+
     return Future.value(_authToken);
   }
 
@@ -128,8 +139,16 @@ class ApiMock implements Api {
   }
 
   @override
-  Future<GameStatusDto> joinGame(String gameId, String authenticationToken) {
-    // TODO: implement joinGame
-    throw UnimplementedError();
+  Future<GameStatusDto> joinGame(String gameId, String authenticationToken) async {
+    var game = _games[gameId];
+    if (game == null) {
+      throw ArgumentError();
+    }
+    return GameStatusDto(
+      game.status,
+      game.gameMap,
+      game.generalInfo.playerX,
+      game.generalInfo.playerO,
+    );
   }
 }

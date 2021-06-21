@@ -5,15 +5,13 @@ VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Silo", "OrleanPG.Silo\OrleanPG.Silo.csproj", "{1A301AC0-278A-4BFA-A86B-77331319E234}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Client", "OrleanPG.Client\OrleanPG.Client.csproj", "{A3BDE610-A9C2-476C-8DB9-E7096D5DA58E}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Grains", "OrleanPG.Grains\OrleanPG.Grains.csproj", "{1F5F6C0A-769C-4BBC-8AD8-DEC35D91BA40}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Grains.Interfaces", "OrleanPG.Grains.Interfaces\OrleanPG.Grains.Interfaces.csproj", "{BF7FB010-10D6-4B2F-B448-3A95F9805FAB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrleanPG.Grains.UnitTests", "OrleanPG.Grains.UnitTests\OrleanPG.Grains.UnitTests.csproj", "{0B14DB80-46C3-4E13-988A-76DCC17990C7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignalR_PG.WebAPI", "SignalR_PG.WebAPI\SignalR_PG.WebAPI.csproj", "{101A8CE1-AF2E-4F81-97B5-EE234837025C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SignalR_PG.WebAPI", "SignalR_PG.WebAPI\SignalR_PG.WebAPI.csproj", "{101A8CE1-AF2E-4F81-97B5-EE234837025C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,10 +23,6 @@ Global
 		{1A301AC0-278A-4BFA-A86B-77331319E234}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1A301AC0-278A-4BFA-A86B-77331319E234}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1A301AC0-278A-4BFA-A86B-77331319E234}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A3BDE610-A9C2-476C-8DB9-E7096D5DA58E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A3BDE610-A9C2-476C-8DB9-E7096D5DA58E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A3BDE610-A9C2-476C-8DB9-E7096D5DA58E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A3BDE610-A9C2-476C-8DB9-E7096D5DA58E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1F5F6C0A-769C-4BBC-8AD8-DEC35D91BA40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1F5F6C0A-769C-4BBC-8AD8-DEC35D91BA40}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1F5F6C0A-769C-4BBC-8AD8-DEC35D91BA40}.Release|Any CPU.ActiveCfg = Release|Any CPU

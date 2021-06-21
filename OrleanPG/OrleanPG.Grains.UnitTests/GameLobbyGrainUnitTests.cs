@@ -1,16 +1,16 @@
 using AutoFixture;
+using AutoFixture.Xunit2;
 using FluentAssertions;
 using Moq;
+using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Runtime;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
-using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
-using AutoFixture.Xunit2;
-using System.Collections.Generic;
 
 namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
 {
@@ -121,7 +121,7 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task JoinGame_OnValidUserTokenAndGameId_StoresUser(AuthorizationToken tokenX, string usernameX, AuthorizationToken tokenO, string usernameO, GameId gameId)
+        public async Task JoinGameAsync_OnValidUserTokenAndGameId_StoresUser(AuthorizationToken tokenX, string usernameX, AuthorizationToken tokenO, string usernameO, GameId gameId)
         {
             var lobby = CreateWrappedLobbyWithGrainInitializerSetup(gameId, out _);
             _userStatesMock.Object.State.AuthorizedUsers.Add(tokenX, usernameX);
@@ -133,9 +133,8 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
             _gamesStateMock.Object.State.RegisteredGames[gameId].Should().Be(new GameParticipation(tokenX, tokenO));
         }
 
-
         [Theory, AutoData]
-        public async Task JoinGame_OnValidUserTokenAndGameId_RunsGame(AuthorizationToken tokenX, string usernameX, AuthorizationToken tokenO, string usernameO, GameId gameId)
+        public async Task JoinGameAsync_OnValidUserTokenAndGameId_RunsGame(AuthorizationToken tokenX, string usernameX, AuthorizationToken tokenO, string usernameO, GameId gameId)
         {
             var lobby = CreateWrappedLobbyWithGrainInitializerSetup(gameId, out Mock<IGameInitializer> initializerMock);
             _userStatesMock.Object.State.AuthorizedUsers.Add(tokenX, usernameX);
@@ -148,7 +147,26 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task JoinGame_OnSameUserJoining_Throws(AuthorizationToken tokenX, string usernameX, GameId gameId)
+        public async Task JoinGameAsync_OnValidUserTokenAndGameId_ReturnsInitialGameStatus(
+            AuthorizationToken tokenX, string usernameX,
+            AuthorizationToken tokenO, string usernameO,
+            GameId gameId)
+        {
+
+            var lobby = CreateWrappedLobbyWithGrainInitializerSetup(gameId, out var gameInitializerMock);
+            _userStatesMock.Object.State.AuthorizedUsers.Add(tokenX, usernameX);
+            _gamesStateMock.Object.State.RegisteredGames.Add(gameId, new GameParticipation(tokenX, null));
+            _userStatesMock.Object.State.AuthorizedUsers.Add(tokenO, usernameO);
+            var expected = new Fixture().Create<GameStatusDto>();
+            gameInitializerMock.Setup(x => x.StartAsync(tokenX, tokenO)).ReturnsAsync(expected);
+
+            var result = await lobby.JoinGameAsync(tokenO, gameId);
+
+            result.Should().Be(expected);
+        }
+
+        [Theory, AutoData]
+        public async Task JoinGameAsync_OnSameUserJoining_Throws(AuthorizationToken tokenX, string usernameX, GameId gameId)
         {
             _userStatesMock.Object.State.AuthorizedUsers.Add(tokenX, usernameX);
             _gamesStateMock.Object.State.RegisteredGames.Add(gameId, new GameParticipation(tokenX, null));
@@ -158,7 +176,7 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task JoinGame_OnNullUserJoining_Throws(AuthorizationToken tokenX, string usernameX, GameId gameId)
+        public async Task JoinGameAsync_OnNullUserJoining_Throws(AuthorizationToken tokenX, string usernameX, GameId gameId)
         {
             _userStatesMock.Object.State.AuthorizedUsers.Add(tokenX, usernameX);
             _gamesStateMock.Object.State.RegisteredGames.Add(gameId, new GameParticipation(tokenX, null));
@@ -170,7 +188,7 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task JoinGame_OnNullGameId_Throws(AuthorizationToken tokenX, string usernameX, AuthorizationToken tokenO, GameId gameId)
+        public async Task JoinGameAsync_OnNullGameId_Throws(AuthorizationToken tokenX, string usernameX, AuthorizationToken tokenO, GameId gameId)
         {
             _userStatesMock.Object.State.AuthorizedUsers.Add(tokenX, usernameX);
             _gamesStateMock.Object.State.RegisteredGames.Add(gameId, new GameParticipation(tokenX, null));
@@ -182,7 +200,7 @@ namespace OrleanPG.Grains.GameLobbyGrain.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task JoinGame_OnInvalidGameId_Throws(
+        public async Task JoinGameAsync_OnInvalidGameId_Throws(
             AuthorizationToken tokenX, string usernameX, AuthorizationToken tokenO, string usernameO,
             GameId gameId, GameId invalidGameId)
         {

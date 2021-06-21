@@ -13,6 +13,8 @@ class ApiMock implements Api {
   final Map<String, GameData> _games = {};
   StreamController<GameStatusDto> _updatesController = StreamController<GameStatusDto>.broadcast();
 
+  static const String botName = 'BOT';
+
   @override
   Future<void> addBot(String gameId, String authenticationToken) {
     _gamesWithBot.add(gameId);
@@ -27,7 +29,16 @@ class ApiMock implements Api {
     return Future.value(null);
   }
 
-  void _pushUpdate(GameData game) => _updatesController.add(GameStatusDto(game.status, game.gameMap));
+  void _pushUpdate(GameData game) {
+    var playForX = _isPlayerX(game);
+
+    _updatesController.add(GameStatusDto(
+      game.status,
+      game.gameMap,
+      playForX ? _username! : botName,
+      playForX ? botName : _username!,
+    ));
+  }
 
   @override
   Future<void> connect() => Future.value(null);

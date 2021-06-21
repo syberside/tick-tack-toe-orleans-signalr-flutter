@@ -5,6 +5,7 @@ using OrleanPG.Grains.Game;
 using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
+using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
 using System;
@@ -29,6 +30,7 @@ namespace OrleanPG.Grains.UnitTests
             // suppress base RegisterOrUpdateReminder calls
             _mockedGame.Setup(x => x.RegisterOrUpdateReminder(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>())).ReturnsAsync((IGrainReminder)null);
             _mockedGame.Setup(x => x.GetStreamProvider(It.IsAny<string>())).Returns(new Mock<IStreamProvider>() { DefaultValue = DefaultValue.Mock }.Object);
+
             _game = _mockedGame.Object;
         }
 
@@ -36,6 +38,8 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task StartAsync_OnNotInitialized_AssignsPlayers(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
+            SetupAuthorizationTokens(tokenX, tokenO);
+
             await _game.StartAsync(tokenX, tokenO);
 
             _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.XTurn, new GameMap()));
@@ -46,6 +50,7 @@ namespace OrleanPG.Grains.UnitTests
         public async Task StartAsync_OnSuccess_NotifySubscribers(AuthorizationToken tokenX, AuthorizationToken tokenO, Guid grainId)
         {
             var streamMock = SetupStreamMock(grainId);
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             await _game.StartAsync(tokenX, tokenO);
 
@@ -65,6 +70,8 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task StartAsync_OnInitialized_Throws(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
+            SetupAuthorizationTokens(tokenX, tokenO);
+
             await _game.StartAsync(tokenX, tokenO);
 
             Func<Task> act = async () => await _game.StartAsync(tokenX, tokenO);
@@ -95,6 +102,8 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task StartAsync_OnNotInitialized_SetTimeoutReminder(AuthorizationToken playerX, AuthorizationToken playerO)
         {
+            SetupAuthorizationTokens(playerX, playerO);
+
             await _game.StartAsync(playerX, playerO);
 
             _mockedGame.Verify(x => x.RegisterOrUpdateReminder(GameGrain.TimeoutCheckReminderName, GameGrain.TimeoutPeriod, GameGrain.TimeoutPeriod));
@@ -144,21 +153,23 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task TurnAsync_OnXTurn_ReturnsOTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        public async Task TurnAsync_OnXTurn_ReturnsOTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO, string xName, string oName)
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
+            SetupAuthorizationTokens(tokenX, tokenO, xName, oName);
 
             var status = await _game.TurnAsync(0, 0, tokenX);
 
             var gameMap = new GameMap();
             gameMap[0, 0] = CellStatus.X;
-            status.Should().Be(new GameStatusDto(GameState.OTurn, gameMap));
+            status.Should().Be(new GameStatusDto(GameState.OTurn, gameMap, xName, oName));
         }
 
         [Theory, AutoData]
         public async Task TurnAsync_OnXTurn_StoresOTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             var status = await _game.TurnAsync(0, 0, tokenX);
 
@@ -174,6 +185,7 @@ namespace OrleanPG.Grains.UnitTests
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
             _storeMock.Object.State.Map[0, 0] = CellStatus.X;
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             var status = await _game.TurnAsync(0, 1, tokenO);
 
@@ -185,6 +197,7 @@ namespace OrleanPG.Grains.UnitTests
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
             _storeMock.Object.State.Map[0, 0] = CellStatus.X;
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             var status = await _game.TurnAsync(0, 1, tokenO);
 
@@ -205,6 +218,7 @@ namespace OrleanPG.Grains.UnitTests
                 {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             var status = await _game.TurnAsync(0, GameGrain.GameSize - 1, tokenX);
 
@@ -222,6 +236,7 @@ namespace OrleanPG.Grains.UnitTests
                 {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             var status = await _game.TurnAsync(GameGrain.GameSize - 1, 0, tokenX);
 
@@ -239,6 +254,7 @@ namespace OrleanPG.Grains.UnitTests
                 {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             var status = await _game.TurnAsync(GameGrain.GameSize - 1, GameGrain.GameSize - 1, tokenX);
 
@@ -256,7 +272,7 @@ namespace OrleanPG.Grains.UnitTests
                 {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
-
+            SetupAuthorizationTokens(tokenX, tokenO);
 
 
             var status = await _game.TurnAsync(GameGrain.GameSize - 1, 0, tokenX);
@@ -269,6 +285,7 @@ namespace OrleanPG.Grains.UnitTests
         public async Task TurnAsync_OnXTurn_ResetsTimeoutReminder(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             await _game.TurnAsync(0, 0, tokenX);
 
@@ -279,6 +296,7 @@ namespace OrleanPG.Grains.UnitTests
         public async Task TurnAsync_OnYTurn_ResetsTimeoutReminder(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
+            SetupAuthorizationTokens(tokenX, tokenO);
 
             await _game.TurnAsync(0, 0, tokenO);
 
@@ -286,11 +304,13 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task TurnAsync_OnValidTurn_NotifySubsribers(AuthorizationToken tokenX, AuthorizationToken tokenO, Guid grainId)
+        public async Task TurnAsync_OnValidTurn_NotifySubsribers(AuthorizationToken tokenX, AuthorizationToken tokenO,
+            string xName, string oName, Guid grainId)
         {
             var streamMock = SetupStreamMock(grainId);
 
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
+            SetupAuthorizationTokens(tokenX, tokenO, xName, oName);
 
             await _game.TurnAsync(0, 0, tokenX);
 
@@ -300,7 +320,7 @@ namespace OrleanPG.Grains.UnitTests
                 {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
                 {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
             };
-            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.OTurn, new GameMap(gameMap)), null), Times.Once);
+            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.OTurn, new GameMap(gameMap), xName, oName), null), Times.Once);
         }
         #endregion
 
@@ -331,6 +351,7 @@ namespace OrleanPG.Grains.UnitTests
             var reminderMock = new Mock<IGrainReminder>();
             _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
+            SetupAuthorizationTokens();
 
             await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
@@ -346,25 +367,42 @@ namespace OrleanPG.Grains.UnitTests
             var reminderMock = new Mock<IGrainReminder>();
             _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
+            SetupAuthorizationTokens();
 
             await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
             _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
         }
 
+
         [Theory]
         [InlineAutoData(GameState.OTurn)]
         [InlineAutoData(GameState.XTurn)]
-        public async Task ReceiveReminder_OnGameNotInEndState_NotifyObservers(GameState gameState, Guid grainId)
+        public async Task ReceiveReminder_OnGameNotInEndState_NotifyObservers(GameState gameState, GameStorageData gameData, Guid grainId, string xName, string oName)
         {
             var streamMock = SetupStreamMock(grainId);
             var _game = _mockedGame.Object;
-            _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
+            _storeMock.Object.State = gameData with { Status = gameState };
+            SetupAuthorizationTokens(gameData.XPlayer, gameData.OPlayer, xName, oName);
 
             await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
-            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.TimedOut, new GameMap()), null), Times.Once);
+            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.TimedOut, gameData.Map, xName, oName), null), Times.Once);
         }
+        #endregion
+
+        #region Helpers
+        private void SetupAuthorizationTokens(AuthorizationToken?[] tokens, string?[] userNames)
+        {
+            var grainFactoryMock = new Mock<IGrainFactory>();
+            _mockedGame.Setup(x => x.GrainFactory).Returns(grainFactoryMock.Object);
+            var lobbyMock = new Mock<IGameLobby>();
+            lobbyMock.Setup(x => x.ResolveUserNamesAsync(tokens)).ReturnsAsync(userNames);
+            grainFactoryMock.Setup(x => x.GetGrain<IGameLobby>(Guid.Empty, It.IsAny<string>())).Returns(lobbyMock.Object);
+        }
+        private void SetupAuthorizationTokens(AuthorizationToken? tokenX = null, AuthorizationToken? tokenO = null, string nameX = null, string nameO = null)
+            => SetupAuthorizationTokens(new AuthorizationToken?[] { tokenX, tokenO }, new string?[] { nameX, nameO });
+
         #endregion
     }
 }

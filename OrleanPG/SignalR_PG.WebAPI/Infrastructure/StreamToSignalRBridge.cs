@@ -20,9 +20,9 @@ namespace SignalR_PG.WebAPI.Infrastructure
 
         public async Task Start()
         {
-            _handle = await _stream.SubscribeAsync(async (update, token) => await _clientProxy.SendAsync("GameUpdated", update));
+            _handle = await _stream.SubscribeAsync(async (update, token) =>
+                await _clientProxy.SendAsync("GameUpdated", update));
         }
-
 
         public async ValueTask DisposeAsync()
         {

@@ -69,15 +69,12 @@ class LobbiesPage extends StatelessWidget {
               onPressed: () => _createNew(context),
             ),
             context.watch<GamesListModel>().isLoaded
-                ? _buildListWidget(
-                    context.read<GamesListModel>().items.toList())
+                ? _buildListWidget(context.read<GamesListModel>().items.toList())
                 : FutureBuilder<List<GameGeneralInfo>>(
                     future: _loadData(context),
-                    builder: (context, snapshot) =>
-                        snapshot.connectionState == ConnectionState.done &&
-                                snapshot.hasData
-                            ? _buildListWidget(snapshot.data!)
-                            : Center(child: CircularProgressIndicator()),
+                    builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && snapshot.hasData
+                        ? _buildListWidget(snapshot.data!)
+                        : Center(child: CircularProgressIndicator()),
                   ),
           ],
         ),
@@ -125,12 +122,8 @@ class LobbieWidget extends StatelessWidget {
               ),
             ),
             data.canParticipate
-                ? ElevatedButton(
-                    onPressed: () => _joinGame(context, data),
-                    child: Text('Play'))
-                : ElevatedButton(
-                    onPressed: () => _viewGame(context, data),
-                    child: Text('View')),
+                ? ElevatedButton(onPressed: () => _joinGame(context, data), child: Text('Play'))
+                : ElevatedButton(onPressed: () => _viewGame(context, data), child: Text('View')),
           ],
         ),
       );

@@ -13,13 +13,8 @@ class CurrentGameModel extends ChangeNotifier {
     gameUpdates.listen((event) {
       _gameMap = event.gameMap;
       _status = event.status;
-      //TODO: this is hack. info should be provided by event
-      if (_participation == UserGameParticipation.playForX) {
-        _generalInfo!.playerO = "bla";
-      }
-      if (_participation == UserGameParticipation.playForO) {
-        _generalInfo!.playerX = "bla";
-      }
+      _generalInfo!.playerO = event.playerOName;
+      _generalInfo!.playerX = event.playerXName;
       _logger.i("Update processed: $event");
       notifyListeners();
     });
@@ -50,6 +45,7 @@ class CurrentGameModel extends ChangeNotifier {
     _gameMap = gameData.gameMap;
     _generalInfo = gameData.generalInfo;
     _participation = participation;
+    _status = gameData.status;
     notifyListeners();
   }
 
@@ -71,6 +67,8 @@ enum UserGameParticipation {
 class GameStatusDto {
   final GameStatus status;
   final List<List<CellStatus>> gameMap;
+  final String? playerXName;
+  final String? playerOName;
 
-  GameStatusDto(this.status, this.gameMap);
+  GameStatusDto(this.status, this.gameMap, this.playerXName, this.playerOName);
 }

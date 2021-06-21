@@ -156,8 +156,8 @@ namespace OrleanPG.Client
                         Console.Write(".");
                         await Task.Delay(1000);
                     }
+                    status = observer.LastUpdate!.Status;
                     observer.Clear();
-                    status = observer.LastUpdate.Status;
                 }
             }
         }

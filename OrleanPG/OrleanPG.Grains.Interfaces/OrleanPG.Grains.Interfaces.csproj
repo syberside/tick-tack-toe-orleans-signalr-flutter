@@ -12,6 +12,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="Microsoft.Orleans.Runtime.Abstractions" Version="3.4.1" />
 	</ItemGroup>
 
 </Project>

@@ -7,17 +7,20 @@ namespace OrleanPG.Grains.Interfaces
     /// </summary>
     public class GameListItemDto
     {
+        // TODO: make nullable after upgrade to 3.5.0 (record types should be supported by that version)
+#pragma warning disable CS8618 // Cant make this nullable because of strange behavior in generated Orleans code (typeof(GameId?))
         public GameId Id { get; init; }
+#pragma warning restore CS8618
         public string? XPlayerName { get; init; }
         public string? OPlayerName { get; init; }
         public bool IsRunning => XPlayerName != null && OPlayerName != null;
 
         public override bool Equals(object? obj)
         {
-            return obj is GameListItemDto info &&
-                   EqualityComparer<GameId>.Default.Equals(Id, info.Id) &&
-                   XPlayerName == info.XPlayerName &&
-                   OPlayerName == info.OPlayerName;
+            return obj is GameListItemDto dto &&
+                   EqualityComparer<GameId>.Default.Equals(Id, dto.Id) &&
+                   XPlayerName == dto.XPlayerName &&
+                   OPlayerName == dto.OPlayerName;
         }
 
         public override int GetHashCode()

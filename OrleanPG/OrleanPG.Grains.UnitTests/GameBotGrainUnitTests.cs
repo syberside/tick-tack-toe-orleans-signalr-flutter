@@ -41,7 +41,9 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task InitAsync_OnNullToken_Throws(bool playForX)
         {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             Func<Task> action = () => _gameBot.InitAsync(null, playForX);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
             await action.Should().ThrowAsync<ArgumentNullException>();
         }
@@ -66,7 +68,9 @@ namespace OrleanPG.Grains.UnitTests
             _storageMock.Object.State = botState;
             update = update with { Status = gameState };
 
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             await _gameBot.OnGameUpdated(update, null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
             _storageMock.Verify(x => x.ClearStateAsync());
         }
@@ -84,9 +88,13 @@ namespace OrleanPG.Grains.UnitTests
             grainFactoryMock.Setup(x => x.GetGrain<IGame>(gameId, null)).Returns(gameMock.Object);
             _gameBotMock.Setup(x => x.GrainFactory).Returns(grainFactoryMock.Object);
 
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             await _gameBot.OnGameUpdated(update, null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
+#pragma warning disable CS8604 // Possible null reference argument.
             gameMock.Verify(x => x.TurnAsync(It.IsAny<int>(), It.IsAny<int>(), botState.Token));
+#pragma warning restore CS8604 // Possible null reference argument.
         }
 
 

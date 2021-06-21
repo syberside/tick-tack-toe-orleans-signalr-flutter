@@ -5,6 +5,6 @@ namespace OrleanPG.Grains.Interfaces
 {
     public interface IGameInitializer : IRemindable, IGrainWithGuidKey
     {
-        Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO);
+        Task<GameStatusDto> StartAsync(AuthorizationToken playerX, AuthorizationToken playerO);
     }
 }

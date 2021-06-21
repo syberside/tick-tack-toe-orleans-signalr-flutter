@@ -43,7 +43,7 @@ namespace OrleanPG.Grains.Game
             await stream.OnNextAsync(update);
         }
 
-        public async Task StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)
+        public async Task<GameStatusDto> StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)
         {
             if (playerX == null)
             {
@@ -63,6 +63,9 @@ namespace OrleanPG.Grains.Game
             }
             await UpdateState(_gameState.State with { XPlayer = playerX, OPlayer = playerO });
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
+
+            var result = await GetGameStatusDtoFromGameState();
+            return result;
         }
 
 

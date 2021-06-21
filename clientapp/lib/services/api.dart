@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:clientapp/models/current_game_model.dart';
-import 'package:clientapp/pages/lobbies_page.dart';
 import 'package:http/io_client.dart';
 import 'package:logger/logger.dart';
 import 'package:signalr_core/signalr_core.dart';
 import 'dart:io';
+import 'package:clientapp/data/cell_status.dart';
+import 'package:clientapp/data/game_general_info.dart';
+import 'package:clientapp/data/game_status.dart';
 
 import 'api_config.dart';
 
@@ -35,18 +37,23 @@ class Api {
       //TODO: filter for current game
       _logger.i("Received update: $message");
       var u = (message as List<dynamic>).first;
-      var m = u["gameMap"]["data"] as List<dynamic>;
-      var data = GameStatusDto(
-        GameStatus.values[u["status"] as int],
-        m.map((r) => (r as List<dynamic>).map((x) => CellStatus.values[x as int]).toList()).toList(),
-        u["playerXName"] as String,
-        u["playerOName"] as String,
-      );
+      var data = _convertStatusDto(u);
       _gameUpdatesCtrl.add(data);
       _logger.i("Update resended");
     });
 
     _connection = connection;
+  }
+
+  GameStatusDto _convertStatusDto(dynamic u) {
+    var m = u["gameMap"]["data"] as List<dynamic>;
+    var data = GameStatusDto(
+      GameStatus.values[u["status"] as int],
+      m.map((r) => (r as List<dynamic>).map((x) => CellStatus.values[x as int]).toList()).toList(),
+      u["playerXName"] as String,
+      u["playerOName"] as String,
+    );
+    return data;
   }
 
   Future<void> disconnect() async {
@@ -109,5 +116,13 @@ class Api {
       throw Error();
     }
     await _connection!.invoke("AddBot", args: [gameId, authenticationToken]);
+  }
+
+  Future<GameStatusDto> joinGame(String gameId, String authenticationToken) async {
+    if (_connection == null) {
+      throw Error();
+    }
+    var result = await _connection!.invoke("JoinGame", args: [gameId, authenticationToken]);
+    return _convertStatusDto(result);
   }
 }

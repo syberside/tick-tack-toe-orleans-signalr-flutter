@@ -288,6 +288,31 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
+        public async Task TurnAsync_OnLastCell_DetectsDraw(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        {
+            var gameMap = new CellStatus[,]
+            {
+                {CellStatus.X,  CellStatus.O, CellStatus.X, },
+                {CellStatus.O,  CellStatus.X, CellStatus.O, },
+                {CellStatus.O,  CellStatus.X, CellStatus.Empty, },
+            };
+            _storeMock.Object.State = _storeMock.Object.State with
+            {
+                XPlayer = tokenX,
+                OPlayer = tokenO,
+                Map = new GameMap(gameMap),
+                Status = GameState.OTurn,
+            };
+            SetupAuthorizationTokens(tokenX, tokenO);
+
+
+            var status = await _game.TurnAsync(2, 2, tokenO);
+
+            status.Status.Should().Be(GameState.Draw, status.GameMap.ToMapString());
+            _storeMock.Object.State.Status.Should().Be(GameState.Draw);
+        }
+
+        [Theory, AutoData]
         public async Task TurnAsync_OnXTurn_ResetsTimeoutReminder(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };

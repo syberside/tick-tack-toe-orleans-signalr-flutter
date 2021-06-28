@@ -15,8 +15,8 @@ namespace OrleanPG.Grains.Game
 
         public const string TimeoutCheckReminderName = "timeout_check";
         public static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
-        public const int GameSize = GameMap.GameSize;
-        private const int _maxIndex = GameSize - 1;
+
+        private const int _maxIndex = GameMap.GameSize - 1;
 
 
         public GameGrain(
@@ -77,11 +77,11 @@ namespace OrleanPG.Grains.Game
             }
             if (x > _maxIndex)
             {
-                throw new ArgumentOutOfRangeException(nameof(x), x, $"Should be less than {GameSize}");
+                throw new ArgumentOutOfRangeException(nameof(x), x, $"Should be less than {GameMap.GameSize}");
             }
             if (y > _maxIndex)
             {
-                throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameSize}");
+                throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameMap.GameSize}");
             }
             if (_gameState.State.Map[x, y] != CellStatus.Empty)
             {
@@ -129,9 +129,9 @@ namespace OrleanPG.Grains.Game
             return await GetGameStatusDtoFromGameState();
         }
 
-        private GameState GetNewStatus(CellStatus status, int x, int y, GameMap gameMap)
+        private GameState GetNewStatus(CellStatus stepBy, int x, int y, GameMap gameMap)
         {
-            if (status != CellStatus.O && status != CellStatus.X)
+            if (stepBy != CellStatus.O && stepBy != CellStatus.X)
             {
                 throw new ArgumentException();
             }
@@ -143,67 +143,68 @@ namespace OrleanPG.Grains.Game
             }
 
             //check row
-            for (var i = 0; i < GameSize; i++)
+            for (var i = 0; i < GameMap.GameSize; i++)
             {
-                if (gameMap[i, y] != status)
+                if (gameMap[i, y] != stepBy)
                 {
                     break;
                 }
-                if (i == GameSize - 1)
+
+                if (i == _maxIndex)
                 {
-                    return StepToWinState(status);
+                    return StepToWinState(stepBy);
 
                 }
             }
 
             //check col
-            for (var i = 0; i < GameSize; i++)
+            for (var i = 0; i < GameMap.GameSize; i++)
             {
-                if (gameMap[x, i] != status)
+                if (gameMap[x, i] != stepBy)
                 {
                     break;
                 }
-                if (i == GameSize - 1)
+                if (i == _maxIndex)
                 {
-                    return StepToWinState(status);
+                    return StepToWinState(stepBy);
                 }
             }
 
             //check diagonal 1
             if (x == y)
             {
-                for (var i = 0; i < GameSize; i++)
+                for (var i = 0; i < GameMap.GameSize; i++)
                 {
-                    if (gameMap[i, i] != status)
+                    if (gameMap[i, i] != stepBy)
                     {
                         break;
                     }
-                    if (i == GameSize - 1)
+                    if (i == _maxIndex)
                     {
-                        return StepToWinState(status);
+                        return StepToWinState(stepBy);
                     }
                 }
             }
 
             //check diagonal 2
-            if (x + y == GameSize - 1)
+            if (x + y == _maxIndex)
             {
 
-                for (var i = 0; i < GameSize; i++)
+                for (var i = 0; i < GameMap.GameSize; i++)
                 {
-                    if (gameMap[GameSize - i - 1, i] != status)
+                    if (gameMap[_maxIndex - i, i] != stepBy)
                     {
                         break;
                     }
-                    if (i == GameSize - 1)
+                    if (i == _maxIndex)
                     {
-                        return StepToWinState(status);
+                        return StepToWinState(stepBy);
 
                     }
                 }
             }
 
-            return StepToNewStep(status);
+            return StepToNewStep(stepBy);
         }
 
         private static GameState StepToNewStep(CellStatus status) => status == CellStatus.X ? GameState.OTurn : GameState.XTurn;
@@ -273,5 +274,10 @@ namespace OrleanPG.Grains.Game
             var userNames = await lobby.ResolveUserNamesAsync(_gameState.State.XPlayer, _gameState.State.OPlayer);
             return new GameStatusDto(_gameState.State.Status, _gameState.State.Map, userNames[0], userNames[1]);
         }
+    }
+
+    public static class GameHelper
+    {
+
     }
 }

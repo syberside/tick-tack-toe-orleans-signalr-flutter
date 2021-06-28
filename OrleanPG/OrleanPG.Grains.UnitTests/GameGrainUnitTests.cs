@@ -130,7 +130,7 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
 
 
-            Func<Task> act = async () => await _game.TurnAsync(GameGrain.GameSize, y, tokenX);
+            Func<Task> act = async () => await _game.TurnAsync(GameMap.GameSize, y, tokenX);
 
             await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
         }
@@ -140,7 +140,7 @@ namespace OrleanPG.Grains.UnitTests
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
 
-            Func<Task> act = async () => await _game.TurnAsync(x, GameGrain.GameSize, tokenX);
+            Func<Task> act = async () => await _game.TurnAsync(x, GameMap.GameSize, tokenX);
 
             await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
         }
@@ -148,8 +148,8 @@ namespace OrleanPG.Grains.UnitTests
         [Theory, AutoData]
         public async Task TurnAsync_OnCellAlreadyUsed_Throws(int x, int y, AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            x %= GameGrain.GameSize;
-            y %= GameGrain.GameSize;
+            x %= GameMap.GameSize;
+            y %= GameMap.GameSize;
             _storeMock.Object.State.Map[x, y] = CellStatus.X;
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
 
@@ -226,7 +226,7 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
             SetupAuthorizationTokens(tokenX, tokenO);
 
-            var status = await _game.TurnAsync(0, GameGrain.GameSize - 1, tokenX);
+            var status = await _game.TurnAsync(0, GameMap.GameSize - 1, tokenX);
 
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);
@@ -244,7 +244,7 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
             SetupAuthorizationTokens(tokenX, tokenO);
 
-            var status = await _game.TurnAsync(GameGrain.GameSize - 1, 0, tokenX);
+            var status = await _game.TurnAsync(GameMap.GameSize - 1, 0, tokenX);
 
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);
@@ -262,7 +262,7 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
             SetupAuthorizationTokens(tokenX, tokenO);
 
-            var status = await _game.TurnAsync(GameGrain.GameSize - 1, GameGrain.GameSize - 1, tokenX);
+            var status = await _game.TurnAsync(GameMap.GameSize - 1, GameMap.GameSize - 1, tokenX);
 
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);
@@ -281,7 +281,7 @@ namespace OrleanPG.Grains.UnitTests
             SetupAuthorizationTokens(tokenX, tokenO);
 
 
-            var status = await _game.TurnAsync(GameGrain.GameSize - 1, 0, tokenX);
+            var status = await _game.TurnAsync(GameMap.GameSize - 1, 0, tokenX);
 
             status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
             _storeMock.Object.State.Status.Should().Be(GameState.XWin);

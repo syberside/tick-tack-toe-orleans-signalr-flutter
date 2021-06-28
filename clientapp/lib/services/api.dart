@@ -48,63 +48,30 @@ class Api {
 
   Future<void> disconnect() async => await _connection?.stop();
 
-  Future<String> login(String username) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    var result = await _connection?.invoke("Login", args: [username]);
-    return result as String;
-  }
+  Future<String> login(String username) => _call("Login", [username], (x) => x as String);
 
-  Future<List<GameListItemDto>> getLobbies() async {
-    if (_connection == null) {
-      throw Error();
-    }
-    var result = await _connection?.invoke("GetLobbies");
-    var items = result as List<dynamic>;
-    var data = items.map((x) => GameListItemDto.fromJson(x)).toList();
-    return data;
-  }
+  Future<List<GameListItemDto>> getLobbies() =>
+      _call("GetLobbies", [], (r) => (r as List<dynamic>).map((x) => GameListItemDto.fromJson(x)).toList());
 
-  Future<String> createGame(String token, bool playForX) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    var result = await _connection?.invoke("CreateGame", args: [
-      token,
-      playForX,
-    ]);
-    _logger.d("Created game: $result");
-    return result as String;
-  }
+  Future<String> createGame(String token, bool playForX) => _call("CreateGame", [token, playForX], (x) => x as String);
 
-  Future<void> subscribeForChanges(String gameId) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    await _connection!.invoke("Watch", args: [gameId]);
-  }
+  Future<void> subscribeForChanges(String gameId) => _call("Watch", [gameId], (x) => null);
 
-  Future<void> turn(int x, int y, String authToken, String gameId) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    await _connection!.invoke("Turn", args: [x, y, authToken, gameId]);
-  }
+  Future<void> turn(int x, int y, String authToken, String gameId) =>
+      _call("Turn", [x, y, authToken, gameId], (x) => null);
 
-  Future<void> addBot(String gameId, String authenticationToken) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    await _connection!.invoke("AddBot", args: [gameId, authenticationToken]);
-  }
+  Future<void> addBot(String gameId, String authenticationToken) =>
+      _call("AddBot", [gameId, authenticationToken], (x) => null);
 
-  Future<GameStatusDto> joinGame(String gameId, String authenticationToken) async {
+  Future<GameStatusDto> joinGame(String gameId, String authenticationToken) =>
+      _call("JoinGame", [gameId, authenticationToken], (x) => GameStatusDto.fromJson(x));
+
+  Future<T> _call<T>(String method, List<Object?> args, T Function(dynamic) deserializer) async {
     if (_connection == null) {
       throw Error();
     }
-    var result = await _connection!.invoke("JoinGame", args: [gameId, authenticationToken]);
-    _logger.d("Join game: $result");
-    return GameStatusDto.fromJson(result);
+    var result = await _connection!.invoke(method, args: args);
+    _logger.d("$method response:  $result");
+    return deserializer(result);
   }
 }

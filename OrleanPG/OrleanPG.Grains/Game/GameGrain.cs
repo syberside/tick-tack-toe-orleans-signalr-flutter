@@ -16,7 +16,6 @@ namespace OrleanPG.Grains.Game
         public const string TimeoutCheckReminderName = "timeout_check";
         public static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
 
-        private const int _maxIndex = GameMap.GameSize - 1;
 
 
         public GameGrain(
@@ -75,11 +74,11 @@ namespace OrleanPG.Grains.Game
             {
                 throw new InvalidOperationException();
             }
-            if (x > _maxIndex)
+            if (x > GameMap.MaxIndex)
             {
                 throw new ArgumentOutOfRangeException(nameof(x), x, $"Should be less than {GameMap.GameSize}");
             }
-            if (y > _maxIndex)
+            if (y > GameMap.MaxIndex)
             {
                 throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameMap.GameSize}");
             }
@@ -143,64 +142,36 @@ namespace OrleanPG.Grains.Game
             }
 
             //check row
-            for (var i = 0; i < GameMap.GameSize; i++)
+            var isRowFilledBy = gameMap.IsRowFilledBy(y, stepBy);
+            if (isRowFilledBy)
             {
-                if (gameMap[i, y] != stepBy)
-                {
-                    break;
-                }
-
-                if (i == _maxIndex)
-                {
-                    return StepToWinState(stepBy);
-
-                }
+                return StepToWinState(stepBy);
             }
 
             //check col
-            for (var i = 0; i < GameMap.GameSize; i++)
+            var isColFilledBy = gameMap.IsColFilledBy(x, stepBy);
+            if (isColFilledBy)
             {
-                if (gameMap[x, i] != stepBy)
-                {
-                    break;
-                }
-                if (i == _maxIndex)
-                {
-                    return StepToWinState(stepBy);
-                }
+                return StepToWinState(stepBy);
             }
 
             //check diagonal 1
             if (x == y)
             {
-                for (var i = 0; i < GameMap.GameSize; i++)
+                var isMainDiagonalFilledBy = gameMap.IsMainDiagonalFilledBy(stepBy);
+                if (isMainDiagonalFilledBy)
                 {
-                    if (gameMap[i, i] != stepBy)
-                    {
-                        break;
-                    }
-                    if (i == _maxIndex)
-                    {
-                        return StepToWinState(stepBy);
-                    }
+                    return StepToWinState(stepBy);
                 }
             }
 
             //check diagonal 2
-            if (x + y == _maxIndex)
+            if (x + y == GameMap.MaxIndex)
             {
-
-                for (var i = 0; i < GameMap.GameSize; i++)
+                var isSideDiagonalFilledBy = gameMap.IsSideDiagonalFilledBy(stepBy);
+                if (isSideDiagonalFilledBy)
                 {
-                    if (gameMap[_maxIndex - i, i] != stepBy)
-                    {
-                        break;
-                    }
-                    if (i == _maxIndex)
-                    {
-                        return StepToWinState(stepBy);
-
-                    }
+                    return StepToWinState(stepBy);
                 }
             }
 
@@ -274,10 +245,5 @@ namespace OrleanPG.Grains.Game
             var userNames = await lobby.ResolveUserNamesAsync(_gameState.State.XPlayer, _gameState.State.OPlayer);
             return new GameStatusDto(_gameState.State.Status, _gameState.State.Map, userNames[0], userNames[1]);
         }
-    }
-
-    public static class GameHelper
-    {
-
     }
 }

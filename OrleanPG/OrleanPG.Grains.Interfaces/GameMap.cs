@@ -10,24 +10,7 @@ namespace OrleanPG.Grains.Interfaces
 
         public CellStatus[,] Data { get; init; }
 
-        public bool HaveEmptyCells
-        {
-            get
-            {
-                for (var i = 0; i < GameSize; i++)
-                {
-                    for (var j = 0; j < GameSize; j++)
-                    {
-                        if (Data[i, j] == CellStatus.Empty)
-                        {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }
-        }
-
+        public bool HaveEmptyCells => EnumerateAvailableCells().Any();
         public GameMap(CellStatus[,] data)
         {
             Data = data;
@@ -57,18 +40,27 @@ namespace OrleanPG.Grains.Interfaces
         }
 
 
-        public override int GetHashCode() => ToString().GetHashCode();
+        public override int GetHashCode()
+        {
+            var hash = 17;
+            var array = Data.Cast<int>();
+            foreach (var arrayItem in array)
+            {
+                hash = hash * 31 + arrayItem;
+            }
+            return hash;
+        }
 
         public override string ToString() => ToMapString();
 
         public override bool Equals(object? obj)
         {
-            return obj is GameMap map && map.ToString() == ToString();
+            return obj is GameMap map && SequenceEquals(Data, map.Data);
         }
 
-        public (int x, int y)[] GetAvailableCells() => GetAvailableCellsGenerator().ToArray();
+        public (int x, int y)[] GetAvailableCells() => EnumerateAvailableCells().ToArray();
 
-        private IEnumerable<(int x, int y)> GetAvailableCellsGenerator()
+        private IEnumerable<(int x, int y)> EnumerateAvailableCells()
         {
             for (var x = 0; x < GameSize; x++)
             {
@@ -81,5 +73,10 @@ namespace OrleanPG.Grains.Interfaces
                 }
             }
         }
+
+        private static bool SequenceEquals<T>(T[,] a, T[,] b) => a.Rank == b.Rank
+           && Enumerable.Range(0, a.Rank).All(d => a.GetLength(d) == b.GetLength(d))
+           && a.Cast<T>().SequenceEqual(b.Cast<T>());
     }
+
 }

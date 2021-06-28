@@ -15,4 +15,7 @@ enum GameStatus {
 
   @JsonValue(4)
   Timeout,
+
+  @JsonValue(5)
+  Draw,
 }

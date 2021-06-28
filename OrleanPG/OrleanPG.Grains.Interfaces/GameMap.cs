@@ -9,6 +9,7 @@ namespace OrleanPG.Grains.Interfaces
         public const int GameSize = 3;
 
         public CellStatus[,] Data { get; init; }
+
         public bool HaveEmptyCells
         {
             get

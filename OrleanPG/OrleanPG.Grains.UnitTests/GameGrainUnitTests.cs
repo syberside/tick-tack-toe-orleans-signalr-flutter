@@ -358,6 +358,7 @@ namespace OrleanPG.Grains.UnitTests
         #region
         [Theory]
         [InlineAutoData(GameState.TimedOut)]
+        [InlineAutoData(GameState.Draw)]
         [InlineAutoData(GameState.XWin)]
         [InlineAutoData(GameState.OWin)]
         public async Task ReceiveReminder_OnGameInEndState_CancelsReminder(GameState gameState)
@@ -409,7 +410,7 @@ namespace OrleanPG.Grains.UnitTests
         [Theory]
         [InlineAutoData(GameState.OTurn)]
         [InlineAutoData(GameState.XTurn)]
-        public async Task ReceiveReminder_OnGameNotInEndState_NotifyObservers(GameState gameState, GameStorageData gameData, Guid grainId, string xName, string oName)
+        public async Task ReceiveReminder_OnGameInNotEndState_NotifyObservers(GameState gameState, GameStorageData gameData, Guid grainId, string xName, string oName)
         {
             var streamMock = SetupStreamMock(grainId);
             var _game = _mockedGame.Object;

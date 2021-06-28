@@ -17,8 +17,6 @@ namespace OrleanPG.Grains.Game
         public const string TimeoutCheckReminderName = "timeout_check";
         public static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
 
-
-
         public GameGrain(
             [PersistentState("game_game_state", "game_state_store")] IPersistentState<GameStorageData> gameState,
             IGrainIdProvider grainIdProvider)
@@ -33,6 +31,17 @@ namespace OrleanPG.Grains.Game
             await _gameState.WriteStateAsync();
             await NotifyObservers();
         }
+
+        private async Task UpdateStateIfChanged(GameEngineState oldState, GameEngineState newState)
+        {
+            if (oldState == newState)
+            {
+                return;
+            }
+            await UpdateState(_gameState.State with { Map = newState.Map, Status = newState.GameState });
+        }
+
+
 
         private async Task NotifyObservers()
         {
@@ -75,28 +84,31 @@ namespace OrleanPG.Grains.Game
             {
                 throw new InvalidOperationException();
             }
+
+            var engine = BuildEngine();
+            var engineState = BuildEngineState();
+            var turn = new UserTurn(x, y, GetParticipation(player));
+            var newState = engine.Process(turn, engineState);
+
+            await UpdateStateIfChanged(engineState, newState);
+
+            await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
+
+            return await GetGameStatusDtoFromGameState();
+        }
+
+        private GameEngineState BuildEngineState() => new GameEngineState(_gameState.State.Map, _gameState.State.Status);
+
+        private static GameEngine BuildEngine()
+        {
             // TODO: use ioc
-            var engine = new GameEngine(new IWinChecker[]
+            return new GameEngine(new IWinChecker[]
             {
                 new ByColWinChecker(),
                 new ByRowWinChecker(),
                 new ByMainDiagonalWinChecker(),
                 new BySideDiagonalWinChecker(),
             });
-
-            var participation = GetParticipation(player);
-            var engineState = new GameEngineState(_gameState.State.Map, _gameState.State.Status);
-
-            var newState = engine.ProcessStep(participation, x, y, engineState);
-
-            await UpdateState(_gameState.State with
-            {
-                Status = newState.GameState,
-                Map = newState.Map,
-            });
-            await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
-
-            return await GetGameStatusDtoFromGameState();
         }
 
         private PlayerParticipation GetParticipation(AuthorizationToken player)
@@ -126,19 +138,12 @@ namespace OrleanPG.Grains.Game
 
         private async Task CheckTimeout()
         {
-            switch (_gameState.State.Status)
-            {
-                case GameState.XWin:
-                case GameState.OWin:
-                case GameState.TimedOut:
-                    break;
-                case GameState.OTurn:
-                case GameState.XTurn:
-                    await UpdateState(_gameState.State with { Status = GameState.TimedOut });
-                    break;
-                default:
-                    throw new NotImplementedException();
-            }
+            var engineState = BuildEngineState();
+            var engine = BuildEngine();
+            var newState = engine.Process(new TimeOut(), engineState);
+
+            await UpdateStateIfChanged(engineState, newState);
+
             var reminder = await GetReminder(TimeoutCheckReminderName);
             await UnregisterReminder(reminder);
         }
@@ -186,17 +191,21 @@ namespace OrleanPG.Grains.Game
             _winCheckers = winCheckers;
         }
 
-        public GameEngineState ProcessStep(PlayerParticipation stepBy, int x, int y, GameEngineState state)
+        public GameEngineState Process(GameAction action, GameEngineState state)
         {
-            if (x > GameMap.MaxIndex)
-            {
-                throw new ArgumentOutOfRangeException(nameof(x), x, $"Should be less than {GameMap.GameSize}");
-            }
-            if (y > GameMap.MaxIndex)
-            {
-                throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameMap.GameSize}");
-            }
+            return Process((dynamic)action, state);
+        }
 
+        /// <summary>
+        /// NOTE: Default callback for multuple dispatch
+        /// </summary>
+        private GameEngineState Process(object action, GameEngineState _)
+            => throw new NotSupportedException($"Action {action?.GetType()} is not supported");
+
+        private GameEngineState Process(UserTurn action, GameEngineState state)
+        {
+            var x = action.X;
+            var y = action.Y;
             var map = state.Map;
             if (map.IsCellBusy(x, y))
             {
@@ -209,15 +218,24 @@ namespace OrleanPG.Grains.Game
                 throw new InvalidOperationException($"Game is in end status: {gameState}");
             }
             var (expectedNextPlayer, stepMarker) = PlayerParticiptionExtensions.PlayerForState(gameState);
-            if (expectedNextPlayer != stepBy)
+            if (expectedNextPlayer != action.StepBy)
             {
                 throw new InvalidOperationException();
             }
 
             var updatedMap = UpdateMap(x, y, map, stepMarker);
-            var status = GetNewStatus(stepBy, updatedMap);
+            var status = GetNewStatus(action.StepBy, updatedMap);
 
             return new GameEngineState(updatedMap, status);
+        }
+
+        private GameEngineState Process(TimeOut _, GameEngineState engineState)
+        {
+            if (engineState.GameState.IsEndStatus())
+            {
+                return engineState;
+            }
+            return engineState with { GameState = GameState.TimedOut };
         }
 
         private static GameMap UpdateMap(int x, int y, GameMap map, CellStatus stepMarker)
@@ -252,9 +270,36 @@ namespace OrleanPG.Grains.Game
 
         private static GameState StepToWinState(PlayerParticipation p)
             => p == PlayerParticipation.X ? GameState.XWin : GameState.OWin;
-
     }
 
+    public class GameAction { }
+
+    public class TimeOut : GameAction { }
+
+    public class UserTurn : GameAction
+    {
+        public int X { get; }
+
+        public int Y { get; }
+
+        public PlayerParticipation StepBy { get; }
+
+        public UserTurn(int x, int y, PlayerParticipation participation)
+        {
+            if (x > GameMap.MaxIndex)
+            {
+                throw new ArgumentOutOfRangeException(nameof(x), x, $"Should be less than {GameMap.GameSize}");
+            }
+            if (y > GameMap.MaxIndex)
+            {
+                throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameMap.GameSize}");
+            }
+
+            X = x;
+            Y = y;
+            StepBy = participation;
+        }
+    }
 
     public enum PlayerParticipation
     {
@@ -331,17 +376,5 @@ namespace OrleanPG.Grains.Game
         }
     }
 
-    public class GameEngineState
-    {
-        public GameMap Map { get; }
-        public GameState GameState { get; }
-
-
-        public GameEngineState(GameMap map, GameState gameState)
-        {
-            Map = map;
-            GameState = gameState;
-        }
-
-    }
+    public record GameEngineState(GameMap Map, GameState GameState);
 }

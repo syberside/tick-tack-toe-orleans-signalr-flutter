@@ -5,8 +5,11 @@ import 'package:clientapp/data/cell_status.dart';
 import 'package:clientapp/data/game_data.dart';
 import 'package:clientapp/data/game_general_info.dart';
 import 'package:clientapp/data/game_status.dart';
-import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/services/api.dart';
+import 'package:clientapp/services/dtos/game_list_item_dto.dart';
+import 'package:clientapp/services/dtos/game_map_dto.dart';
+
+import 'dtos/game_status_dto.dart';
 
 class ApiMock implements Api {
   static const String _authToken = 'token';
@@ -36,10 +39,10 @@ class ApiMock implements Api {
     var playForX = _isPlayerX(game);
 
     _updatesController.add(GameStatusDto(
-      game.status,
-      game.gameMap,
-      playForX ? _username! : botName,
-      playForX ? botName : _username!,
+      status: game.status,
+      gameMap: GameMapDto(data: _deepCloneMapData(game)),
+      playerXName: playForX ? _username! : botName,
+      playerOName: playForX ? botName : _username!,
     ));
   }
 
@@ -60,7 +63,14 @@ class ApiMock implements Api {
   Stream<GameStatusDto> get gameUpdates => _updatesController.stream;
 
   @override
-  Future<List<GameGeneralInfo>> getLobbies() => Future.value(_games.values.map((x) => x.generalInfo).toList());
+  Future<List<GameListItemDto>> getLobbies() => Future.value(_games.values
+      .map((x) => x.generalInfo)
+      .map((x) => GameListItemDto(
+            gameId: x.gameId,
+            playerXName: x.playerXName,
+            playerOName: x.playerOName,
+          ))
+      .toList());
 
   @override
   Future<String> login(String username) {
@@ -104,7 +114,7 @@ class ApiMock implements Api {
   }
 
   bool _isPlayerX(GameData game) {
-    var playForX = game.generalInfo.playerX == _username;
+    var playForX = game.generalInfo.playerXName == _username;
     return playForX;
   }
 
@@ -145,10 +155,12 @@ class ApiMock implements Api {
       throw ArgumentError();
     }
     return GameStatusDto(
-      game.status,
-      game.gameMap,
-      game.generalInfo.playerX,
-      game.generalInfo.playerO,
+      status: game.status,
+      gameMap: GameMapDto(data: _deepCloneMapData(game)),
+      playerXName: game.generalInfo.playerXName,
+      playerOName: game.generalInfo.playerOName,
     );
   }
+
+  List<List<CellStatus>> _deepCloneMapData(GameData game) => game.gameMap.map((e) => e.toList()).toList();
 }

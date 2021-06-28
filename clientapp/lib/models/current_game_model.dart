@@ -2,6 +2,8 @@ import 'package:clientapp/data/cell_status.dart';
 import 'package:clientapp/data/game_data.dart';
 import 'package:clientapp/data/game_general_info.dart';
 import 'package:clientapp/data/game_status.dart';
+import 'package:clientapp/data/user_game_participation.dart';
+import 'package:clientapp/services/dtos/game_status_dto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
@@ -14,10 +16,11 @@ class CurrentGameModel extends ChangeNotifier {
 
   CurrentGameModel(Stream<GameStatusDto> gameUpdates, this._logger) {
     gameUpdates.listen((event) {
-      _gameMap = event.gameMap;
+      //TODO: filter for current game
+      _gameMap = event.gameMap.data;
       _status = event.status;
-      _generalInfo!.playerO = event.playerOName;
-      _generalInfo!.playerX = event.playerXName;
+      _generalInfo!.playerOName = event.playerOName;
+      _generalInfo!.playerXName = event.playerXName;
       _logger.i("Update processed: $event");
       notifyListeners();
     });
@@ -35,7 +38,6 @@ class CurrentGameModel extends ChangeNotifier {
   }
 
   void newGameCreated(GameData gameData, bool playForX) {
-    //TODO: remove gamedata?
     _gameMap = gameData.gameMap;
     _generalInfo = gameData.generalInfo;
     _participation = playForX ? UserGameParticipation.playForX : UserGameParticipation.playForO;
@@ -44,7 +46,6 @@ class CurrentGameModel extends ChangeNotifier {
   }
 
   void join(GameData gameData, UserGameParticipation participation) {
-    //TODO: remove gamedata?
     _gameMap = gameData.gameMap;
     _generalInfo = gameData.generalInfo;
     _participation = participation;
@@ -53,25 +54,9 @@ class CurrentGameModel extends ChangeNotifier {
   }
 
   void view(GameData gameData) {
-    //TODO: remove gamedata?
     _gameMap = gameData.gameMap;
     _generalInfo = gameData.generalInfo;
     _participation = UserGameParticipation.readOnly;
     notifyListeners();
   }
-}
-
-enum UserGameParticipation {
-  readOnly,
-  playForX,
-  playForO,
-}
-
-class GameStatusDto {
-  final GameStatus status;
-  final List<List<CellStatus>> gameMap;
-  final String? playerXName;
-  final String? playerOName;
-
-  GameStatusDto(this.status, this.gameMap, this.playerXName, this.playerOName);
 }

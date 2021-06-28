@@ -1,13 +1,11 @@
 import 'dart:async';
 
-import 'package:clientapp/models/current_game_model.dart';
+import 'package:clientapp/services/dtos/game_list_item_dto.dart';
+import 'package:clientapp/services/dtos/game_status_dto.dart';
 import 'package:http/io_client.dart';
 import 'package:logger/logger.dart';
 import 'package:signalr_core/signalr_core.dart';
 import 'dart:io';
-import 'package:clientapp/data/cell_status.dart';
-import 'package:clientapp/data/game_general_info.dart';
-import 'package:clientapp/data/game_status.dart';
 
 import 'api_config.dart';
 
@@ -33,32 +31,22 @@ class Api {
         .build();
 
     await connection.start();
-    connection.on('GameUpdated', (message) {
-      //TODO: filter for current game
-      _logger.i("Received update: $message");
-      var u = (message as List<dynamic>).first;
-      var data = _convertStatusDto(u);
-      _gameUpdatesCtrl.add(data);
-      _logger.i("Update resended");
-    });
+    connection.on('GameUpdated', _processUpdateMessage);
 
     _connection = connection;
   }
 
-  GameStatusDto _convertStatusDto(dynamic u) {
-    var m = u["gameMap"]["data"] as List<dynamic>;
-    var data = GameStatusDto(
-      GameStatus.values[u["status"] as int],
-      m.map((r) => (r as List<dynamic>).map((x) => CellStatus.values[x as int]).toList()).toList(),
-      u["playerXName"] as String,
-      u["playerOName"] as String,
-    );
-    return data;
+  void _processUpdateMessage(message) {
+    _logger.d("Received updates: $message");
+    var updateMessages = message as List<dynamic>;
+    var updateItems = updateMessages.map((x) => GameStatusDto.fromJson(x));
+    for (var item in updateItems) {
+      _gameUpdatesCtrl.add(item);
+    }
+    _logger.d("Updates pushed to consumers");
   }
 
-  Future<void> disconnect() async {
-    await _connection?.stop();
-  }
+  Future<void> disconnect() async => await _connection?.stop();
 
   Future<String> login(String username) async {
     if (_connection == null) {
@@ -68,20 +56,13 @@ class Api {
     return result as String;
   }
 
-  Future<List<GameGeneralInfo>> getLobbies() async {
+  Future<List<GameListItemDto>> getLobbies() async {
     if (_connection == null) {
       throw Error();
     }
     var result = await _connection?.invoke("GetLobbies");
-    //TODO: Add generated serialization (fromJson)
     var items = result as List<dynamic>;
-    var data = items
-        .map((x) => GameGeneralInfo(
-              x["gameId"] as String,
-              x["playerX"] is String ? x["playerX"] as String : null,
-              x["playerO"] is String ? x["playerO"] as String : null,
-            ))
-        .toList();
+    var data = items.map((x) => GameListItemDto.fromJson(x)).toList();
     return data;
   }
 
@@ -93,7 +74,7 @@ class Api {
       token,
       playForX,
     ]);
-    _logger.i("Created game: $result");
+    _logger.d("Created game: $result");
     return result as String;
   }
 
@@ -123,6 +104,7 @@ class Api {
       throw Error();
     }
     var result = await _connection!.invoke("JoinGame", args: [gameId, authenticationToken]);
-    return _convertStatusDto(result);
+    _logger.d("Join game: $result");
+    return GameStatusDto.fromJson(result);
   }
 }

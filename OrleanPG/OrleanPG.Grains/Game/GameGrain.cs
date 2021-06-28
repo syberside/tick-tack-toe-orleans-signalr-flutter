@@ -4,6 +4,7 @@ using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace OrleanPG.Grains.Game
@@ -74,113 +75,42 @@ namespace OrleanPG.Grains.Game
             {
                 throw new InvalidOperationException();
             }
-            if (x > GameMap.MaxIndex)
+            // TODO: use ioc
+            var engine = new GameEngine(new IWinChecker[]
             {
-                throw new ArgumentOutOfRangeException(nameof(x), x, $"Should be less than {GameMap.GameSize}");
-            }
-            if (y > GameMap.MaxIndex)
-            {
-                throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameMap.GameSize}");
-            }
-            if (_gameState.State.Map[x, y] != CellStatus.Empty)
-            {
-                throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(_gameState.State.Map[x, y] == CellStatus.X ? "X" : "O")}");
-            }
+                new ByColWinChecker(),
+                new ByRowWinChecker(),
+                new ByMainDiagonalWinChecker(),
+                new BySideDiagonalWinChecker(),
+            });
 
-            var stepMarker = CellStatus.Empty;
-            switch (_gameState.State.Status)
-            {
-                case GameState.OWin:
-                case GameState.XWin:
-                    throw new InvalidOperationException();
-                case GameState.XTurn:
-                    if (player != _gameState.State.XPlayer)
-                    {
-                        throw new InvalidOperationException();
-                    }
-                    stepMarker = CellStatus.X;
-                    break;
-                case GameState.OTurn:
-                    if (player != _gameState.State.OPlayer)
-                    {
-                        throw new InvalidOperationException();
-                    }
-                    stepMarker = CellStatus.O;
-                    break;
-                case GameState.TimedOut:
-                    throw new InvalidOperationException();
-                default:
-                    throw new NotSupportedException();
-            }
+            var participation = GetParticipation(player);
+            var engineState = new GameEngineState(_gameState.State.Map, _gameState.State.Status);
 
-
-            var map = _gameState.State.Map.Clone();
-            map[x, y] = stepMarker;
-            var status = GetNewStatus(stepMarker, x, y, map);
+            var newState = engine.ProcessStep(participation, x, y, engineState);
 
             await UpdateState(_gameState.State with
             {
-                Status = status,
-                Map = map,
+                Status = newState.GameState,
+                Map = newState.Map,
             });
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
 
             return await GetGameStatusDtoFromGameState();
         }
 
-        private GameState GetNewStatus(CellStatus stepBy, int x, int y, GameMap gameMap)
+        private PlayerParticipation GetParticipation(AuthorizationToken player)
         {
-            if (stepBy != CellStatus.O && stepBy != CellStatus.X)
+            if (player == _gameState.State.XPlayer)
             {
-                throw new ArgumentException();
+                return PlayerParticipation.X;
             }
-
-            //check for draw
-            if (!gameMap.HaveEmptyCells)
+            if (player == _gameState.State.OPlayer)
             {
-                return GameState.Draw;
+                return PlayerParticipation.O;
             }
-
-            //check row
-            var isRowFilledBy = gameMap.IsRowFilledBy(y, stepBy);
-            if (isRowFilledBy)
-            {
-                return StepToWinState(stepBy);
-            }
-
-            //check col
-            var isColFilledBy = gameMap.IsColFilledBy(x, stepBy);
-            if (isColFilledBy)
-            {
-                return StepToWinState(stepBy);
-            }
-
-            //check diagonal 1
-            if (x == y)
-            {
-                var isMainDiagonalFilledBy = gameMap.IsMainDiagonalFilledBy(stepBy);
-                if (isMainDiagonalFilledBy)
-                {
-                    return StepToWinState(stepBy);
-                }
-            }
-
-            //check diagonal 2
-            if (x + y == GameMap.MaxIndex)
-            {
-                var isSideDiagonalFilledBy = gameMap.IsSideDiagonalFilledBy(stepBy);
-                if (isSideDiagonalFilledBy)
-                {
-                    return StepToWinState(stepBy);
-                }
-            }
-
-            return StepToNewStep(stepBy);
+            throw new ArgumentException("Player is not a participant of this game");
         }
-
-        private static GameState StepToNewStep(CellStatus status) => status == CellStatus.X ? GameState.OTurn : GameState.XTurn;
-
-        private static GameState StepToWinState(CellStatus status) => status == CellStatus.X ? GameState.XWin : GameState.OWin;
 
         public Task<GameStatusDto> GetStatus() => GetGameStatusDtoFromGameState();
 
@@ -245,5 +175,173 @@ namespace OrleanPG.Grains.Game
             var userNames = await lobby.ResolveUserNamesAsync(_gameState.State.XPlayer, _gameState.State.OPlayer);
             return new GameStatusDto(_gameState.State.Status, _gameState.State.Map, userNames[0], userNames[1]);
         }
+    }
+
+    public class GameEngine
+    {
+        private readonly IWinChecker[] _winCheckers;
+
+        public GameEngine(IWinChecker[] winCheckers)
+        {
+            _winCheckers = winCheckers;
+        }
+
+        public GameEngineState ProcessStep(PlayerParticipation stepBy, int x, int y, GameEngineState state)
+        {
+            if (x > GameMap.MaxIndex)
+            {
+                throw new ArgumentOutOfRangeException(nameof(x), x, $"Should be less than {GameMap.GameSize}");
+            }
+            if (y > GameMap.MaxIndex)
+            {
+                throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameMap.GameSize}");
+            }
+
+            var map = state.Map;
+            if (map.IsCellBusy(x, y))
+            {
+                throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(map[x, y] == CellStatus.X ? "X" : "O")}");
+            }
+
+            var gameState = state.GameState;
+            if (gameState.IsEndStatus())
+            {
+                throw new InvalidOperationException($"Game is in end status: {gameState}");
+            }
+            var (expectedNextPlayer, stepMarker) = PlayerParticiptionExtensions.PlayerForState(gameState);
+            if (expectedNextPlayer != stepBy)
+            {
+                throw new InvalidOperationException();
+            }
+
+            var updatedMap = UpdateMap(x, y, map, stepMarker);
+            var status = GetNewStatus(stepBy, updatedMap);
+
+            return new GameEngineState(updatedMap, status);
+        }
+
+        private static GameMap UpdateMap(int x, int y, GameMap map, CellStatus stepMarker)
+        {
+            var updatedMap = map.Clone();
+            updatedMap[x, y] = stepMarker;
+            return updatedMap;
+        }
+
+        private GameState GetNewStatus(PlayerParticipation stepBy, GameMap map)
+        {
+            if (!map.HaveEmptyCells)
+            {
+                return GameState.Draw;
+            }
+            var win = _winCheckers
+              .Select(x => x.CheckIfWin(map, stepBy))
+              .Where(x => x != null)
+              .FirstOrDefault();
+            // NOTE: Win content is currently not used, but will be used for drawing a game result in UI in the future
+            if (win == null)
+            {
+                return StepToNewStep(stepBy);
+            }
+            else
+            {
+                return StepToWinState(stepBy);
+            }
+        }
+        private static GameState StepToNewStep(PlayerParticipation p)
+            => p == PlayerParticipation.X ? GameState.OTurn : GameState.XTurn;
+
+        private static GameState StepToWinState(PlayerParticipation p)
+            => p == PlayerParticipation.X ? GameState.XWin : GameState.OWin;
+
+    }
+
+
+    public enum PlayerParticipation
+    {
+        X,
+        O
+    }
+
+    public class Win
+    {
+        public int Index { get; }
+
+        public GameAxis Axis { get; }
+
+        public Win(int index, GameAxis axis)
+        {
+            Index = index;
+            Axis = axis;
+        }
+    }
+
+    public interface IWinChecker
+    {
+        Win? CheckIfWin(GameMap map, PlayerParticipation forPlayer);
+    }
+
+    public class ByRowWinChecker : IWinChecker
+    {
+        public Win? CheckIfWin(GameMap map, PlayerParticipation forPlayer)
+            => Enumerable.Range(0, GameMap.GameSize)
+            .Where(x => map.IsRowFilledBy(x, forPlayer.ToCellStatus()))
+            .Select(x => new Win(x, GameAxis.X)).FirstOrDefault();
+    }
+
+    public class ByColWinChecker : IWinChecker
+    {
+        public Win? CheckIfWin(GameMap map, PlayerParticipation forPlayer)
+            => Enumerable.Range(0, GameMap.GameSize)
+            .Where(y => map.IsColFilledBy(y, forPlayer.ToCellStatus()))
+            .Select(y => new Win(y, GameAxis.Y)).FirstOrDefault();
+    }
+
+    public class ByMainDiagonalWinChecker : IWinChecker
+    {
+        public Win? CheckIfWin(GameMap map, PlayerParticipation forPlayer)
+            => map.IsMainDiagonalFilledBy(forPlayer.ToCellStatus()) ? new Win(0, GameAxis.MainDiagonal) : null;
+    }
+
+    public class BySideDiagonalWinChecker : IWinChecker
+    {
+        public Win? CheckIfWin(GameMap map, PlayerParticipation forPlayer)
+            => map.IsSideDiagonalFilledBy(forPlayer.ToCellStatus()) ? new Win(0, GameAxis.SideDiagonal) : null;
+    }
+
+    public static class PlayerParticiptionExtensions
+    {
+        public static CellStatus ToCellStatus(this PlayerParticipation participaton)
+        {
+            switch (participaton)
+            {
+                case PlayerParticipation.X: return CellStatus.X;
+                case PlayerParticipation.O: return CellStatus.O;
+                default: throw new NotSupportedException();
+            }
+        }
+
+        public static (PlayerParticipation, CellStatus marker) PlayerForState(GameState status)
+        {
+            switch (status)
+            {
+                case GameState.XTurn: return (PlayerParticipation.X, CellStatus.X);
+                case GameState.OTurn: return (PlayerParticipation.O, CellStatus.O);
+                default: throw new NotSupportedException();
+            }
+        }
+    }
+
+    public class GameEngineState
+    {
+        public GameMap Map { get; }
+        public GameState GameState { get; }
+
+
+        public GameEngineState(GameMap map, GameState gameState)
+        {
+            Map = map;
+            GameState = gameState;
+        }
+
     }
 }

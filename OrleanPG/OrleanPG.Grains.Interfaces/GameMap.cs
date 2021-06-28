@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -142,5 +143,7 @@ namespace OrleanPG.Grains.Interfaces
             }
             return false;
         }
+
+        public bool IsCellBusy(int x, int y) => this[x, y] != CellStatus.Empty;
     }
 }

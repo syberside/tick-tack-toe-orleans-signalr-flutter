@@ -1,13 +1,11 @@
 import 'dart:async';
 
-import 'package:clientapp/models/current_game_model.dart';
+import 'package:clientapp/services/dtos/game_list_item_dto.dart';
+import 'package:clientapp/services/dtos/game_status_dto.dart';
 import 'package:http/io_client.dart';
 import 'package:logger/logger.dart';
 import 'package:signalr_core/signalr_core.dart';
 import 'dart:io';
-import 'package:clientapp/data/cell_status.dart';
-import 'package:clientapp/data/game_general_info.dart';
-import 'package:clientapp/data/game_status.dart';
 
 import 'api_config.dart';
 
@@ -33,96 +31,47 @@ class Api {
         .build();
 
     await connection.start();
-    connection.on('GameUpdated', (message) {
-      //TODO: filter for current game
-      _logger.i("Received update: $message");
-      var u = (message as List<dynamic>).first;
-      var data = _convertStatusDto(u);
-      _gameUpdatesCtrl.add(data);
-      _logger.i("Update resended");
-    });
+    connection.on('GameUpdated', _processUpdateMessage);
 
     _connection = connection;
   }
 
-  GameStatusDto _convertStatusDto(dynamic u) {
-    var m = u["gameMap"]["data"] as List<dynamic>;
-    var data = GameStatusDto(
-      GameStatus.values[u["status"] as int],
-      m.map((r) => (r as List<dynamic>).map((x) => CellStatus.values[x as int]).toList()).toList(),
-      u["playerXName"] as String,
-      u["playerOName"] as String,
-    );
-    return data;
+  void _processUpdateMessage(message) {
+    _logger.d("Received updates: $message");
+    var updateMessages = message as List<dynamic>;
+    var updateItems = updateMessages.map((x) => GameStatusDto.fromJson(x));
+    for (var item in updateItems) {
+      _gameUpdatesCtrl.add(item);
+    }
+    _logger.d("Updates pushed to consumers");
   }
 
-  Future<void> disconnect() async {
-    await _connection?.stop();
-  }
+  Future<void> disconnect() async => await _connection?.stop();
 
-  Future<String> login(String username) async {
+  Future<String> login(String username) => _call("Login", [username], (x) => x as String);
+
+  Future<List<GameListItemDto>> getLobbies() =>
+      _call("GetLobbies", [], (r) => (r as List<dynamic>).map((x) => GameListItemDto.fromJson(x)).toList());
+
+  Future<String> createGame(String token, bool playForX) => _call("CreateGame", [token, playForX], (x) => x as String);
+
+  Future<void> subscribeForChanges(String gameId) => _call("Watch", [gameId], (x) => null);
+
+  Future<void> turn(int x, int y, String authToken, String gameId) =>
+      _call("Turn", [x, y, authToken, gameId], (x) => null);
+
+  Future<void> addBot(String gameId, String authenticationToken) =>
+      _call("AddBot", [gameId, authenticationToken], (x) => null);
+
+  Future<GameStatusDto> joinGame(String gameId, String authenticationToken) =>
+      _call("JoinGame", [gameId, authenticationToken], (x) => GameStatusDto.fromJson(x));
+
+  Future<T> _call<T>(String method, List<Object?> args, T Function(dynamic) deserializer) async {
     if (_connection == null) {
       throw Error();
     }
-    var result = await _connection?.invoke("Login", args: [username]);
-    return result as String;
-  }
-
-  Future<List<GameGeneralInfo>> getLobbies() async {
-    if (_connection == null) {
-      throw Error();
-    }
-    var result = await _connection?.invoke("GetLobbies");
-    //TODO: Add generated serialization (fromJson)
-    var items = result as List<dynamic>;
-    var data = items
-        .map((x) => GameGeneralInfo(
-              x["gameId"] as String,
-              x["playerX"] is String ? x["playerX"] as String : null,
-              x["playerO"] is String ? x["playerO"] as String : null,
-            ))
-        .toList();
-    return data;
-  }
-
-  Future<String> createGame(String token, bool playForX) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    var result = await _connection?.invoke("CreateGame", args: [
-      token,
-      playForX,
-    ]);
-    _logger.i("Created game: $result");
-    return result as String;
-  }
-
-  Future<void> subscribeForChanges(String gameId) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    await _connection!.invoke("Watch", args: [gameId]);
-  }
-
-  Future<void> turn(int x, int y, String authToken, String gameId) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    await _connection!.invoke("Turn", args: [x, y, authToken, gameId]);
-  }
-
-  Future<void> addBot(String gameId, String authenticationToken) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    await _connection!.invoke("AddBot", args: [gameId, authenticationToken]);
-  }
-
-  Future<GameStatusDto> joinGame(String gameId, String authenticationToken) async {
-    if (_connection == null) {
-      throw Error();
-    }
-    var result = await _connection!.invoke("JoinGame", args: [gameId, authenticationToken]);
-    return _convertStatusDto(result);
+    var result = await _connection!.invoke(method, args: args);
+    _logger.d("$method response:  $result");
+    return deserializer(result);
   }
 }

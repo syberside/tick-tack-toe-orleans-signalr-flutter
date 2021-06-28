@@ -1,20 +1,20 @@
-import 'package:clientapp/models/current_game_model.dart';
+import 'package:clientapp/data/user_game_participation.dart';
 
 class GameGeneralInfo {
-  bool get canParticipate => playerO == null || playerX == null;
+  bool get canParticipate => playerOName == null || playerXName == null;
   bool get isFilledWithPlayers => !canParticipate;
 
-  String? playerX;
-  String? playerO;
+  String? playerXName;
+  String? playerOName;
   String gameId;
 
-  GameGeneralInfo(this.gameId, this.playerX, this.playerO);
+  GameGeneralInfo(this.gameId, this.playerXName, this.playerOName);
 
   UserGameParticipation posibleParticipation() {
-    if (playerX == null) {
+    if (playerXName == null) {
       return UserGameParticipation.playForX;
     }
-    if (playerO == null) {
+    if (playerOName == null) {
       return UserGameParticipation.playForO;
     }
     return UserGameParticipation.readOnly;

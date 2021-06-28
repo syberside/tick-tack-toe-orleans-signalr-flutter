@@ -18,7 +18,7 @@ class LobbiesPage extends StatelessWidget {
     var api = context.read<Api>();
     var result = await api.getLobbies();
     var model = context.read<GamesListModel>();
-    model.replace(result);
+    model.replace(result.map((x) => GameGeneralInfo(x.gameId, x.playerXName, x.playerOName)));
     return model.items.toList();
   }
 
@@ -115,14 +115,14 @@ class LobbieWidget extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 2.0),
-                child: Text(data.playerX ?? "", textAlign: TextAlign.left),
+                child: Text(data.playerXName ?? "", textAlign: TextAlign.left),
               ),
             ),
             Text("VS"),
             Expanded(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 2.0),
-                child: Text(data.playerO ?? "", textAlign: TextAlign.right),
+                child: Text(data.playerOName ?? "", textAlign: TextAlign.right),
               ),
             ),
             data.canParticipate
@@ -141,7 +141,7 @@ class LobbieWidget extends StatelessWidget {
     var currentState = await api.joinGame(gameId, authenticationToken);
 
     final data = GameData(
-      currentState.gameMap,
+      currentState.gameMap.data,
       GameGeneralInfo(gameId, currentState.playerXName, currentState.playerOName),
       currentState.status,
     );

@@ -41,9 +41,9 @@ namespace SignalR_PG.WebAPI.Hubs
         {
             return result.Select(x => new GameGeneralInfoDto
             {
-                playerX = x.XPlayerName,
-                playerO = x.OPlayerName,
-                gameId = x.Id?.Value.ToString(),
+                GameId = x.Id?.Value.ToString(),
+                PlayerXName = x.XPlayerName,
+                PlayerOName = x.OPlayerName,
             }).ToArray();
         }
 

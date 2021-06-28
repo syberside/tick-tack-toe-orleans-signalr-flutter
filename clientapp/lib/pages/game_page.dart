@@ -1,3 +1,4 @@
+import 'package:clientapp/data/user_game_participation.dart';
 import 'package:clientapp/models/user_model.dart';
 import 'package:clientapp/models/current_game_model.dart';
 import 'package:clientapp/data/cell_status.dart';
@@ -165,12 +166,12 @@ class GamePage extends StatelessWidget {
       case UserGameParticipation.readOnly:
         throw ArgumentError();
       case UserGameParticipation.playForX:
-        username = model.generalInfo!.playerX;
+        username = model.generalInfo!.playerXName;
         textAlign = TextAlign.start;
         playerMark = 'X';
         break;
       case UserGameParticipation.playForO:
-        username = model.generalInfo!.playerO;
+        username = model.generalInfo!.playerOName;
         textAlign = TextAlign.end;
         playerMark = 'O';
         break;

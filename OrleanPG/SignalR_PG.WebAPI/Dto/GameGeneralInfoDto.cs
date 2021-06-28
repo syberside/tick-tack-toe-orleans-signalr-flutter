@@ -2,8 +2,8 @@
 {
     public class GameGeneralInfoDto
     {
-        public string? playerX { get; set; }
-        public string? playerO { get; set; }
-        public string? gameId { get; set; }
+        public string? PlayerXName { get; set; }
+        public string? PlayerOName { get; set; }
+        public string? GameId { get; set; }
     }
 }

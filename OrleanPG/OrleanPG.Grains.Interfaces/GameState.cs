@@ -9,6 +9,7 @@ namespace OrleanPG.Grains.Interfaces
         XWin = 2,
         OWin = 3,
         TimedOut = 4,
+        Draw = 5,
     }
 
     public static class GameStateExtension
@@ -23,6 +24,7 @@ namespace OrleanPG.Grains.Interfaces
                 case GameState.XWin:
                 case GameState.OWin:
                 case GameState.TimedOut:
+                case GameState.Draw:
                     return true;
                 default:
                     throw new NotImplementedException();

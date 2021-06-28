@@ -67,8 +67,8 @@ class GamePage extends StatelessWidget {
     return result;
   }
 
-  Widget _toWidget(CellStatus c) {
-    switch (c) {
+  Widget _toWidget(CellStatus cellStatus) {
+    switch (cellStatus) {
       case CellStatus.Empty:
         return Icon(
           Icons.cancel_outlined,
@@ -125,10 +125,12 @@ class GamePage extends StatelessWidget {
             : model.participation == UserGameParticipation.playForO
                 ? Text("You Won!")
                 : Text("You lose :( ");
+      case GameStatus.Draw:
+        return Text("Draw");
       case GameStatus.Timeout:
         return Text("Timeout >:[ ");
-      default:
-        throw UnimplementedError();
+      case null:
+        throw ArgumentError();
     }
   }
 

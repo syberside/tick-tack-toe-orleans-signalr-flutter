@@ -88,7 +88,7 @@ namespace OrleanPG.Grains.Game
                 throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(_gameState.State.Map[x, y] == CellStatus.X ? "X" : "O")}");
             }
 
-            CellStatus stepMarker = CellStatus.Empty;
+            var stepMarker = CellStatus.Empty;
             switch (_gameState.State.Status)
             {
                 case GameState.OWin:
@@ -135,6 +135,13 @@ namespace OrleanPG.Grains.Game
             {
                 throw new ArgumentException();
             }
+
+            //check for draw
+            if (!gameMap.HaveEmptyCells)
+            {
+                return GameState.Draw;
+            }
+
             //check row
             for (var i = 0; i < GameSize; i++)
             {

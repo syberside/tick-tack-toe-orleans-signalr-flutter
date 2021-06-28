@@ -55,4 +55,5 @@ const _$GameStatusEnumMap = {
   GameStatus.XWin: 2,
   GameStatus.OWin: 3,
   GameStatus.Timeout: 4,
+  GameStatus.Draw: 5,
 };

@@ -97,7 +97,7 @@ namespace OrleanPG.Grains.Game
             return await GetGameStatusDtoFromGameState();
         }
 
-        private GameEngineState BuildEngineState() => new GameEngineState(_gameState.State.Map, _gameState.State.Status);
+        private GameEngineState BuildEngineState() => new(_gameState.State.Map, _gameState.State.Status);
 
         private static GameEngine BuildEngine()
         {

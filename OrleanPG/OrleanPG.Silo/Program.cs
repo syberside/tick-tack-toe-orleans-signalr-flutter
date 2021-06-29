@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OrleanPG.Grains.GameLobbyGrain;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
+using OrleanPG.Silo.IoC;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
@@ -65,7 +66,8 @@ namespace OrleanPG.Silo
                 .ConfigureServices(services => services
                     .AddSingleton<IGrainIdProvider, GrainIdProvider>()
                     .AddSingleton((sp) => new Random(DateTime.Now.Millisecond))
-                    );
+                    .AddGameEngine()
+                    ); ;
 
             var host = builder.Build();
             await host.StartAsync();

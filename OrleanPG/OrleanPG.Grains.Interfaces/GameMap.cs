@@ -18,6 +18,13 @@ namespace OrleanPG.Grains.Interfaces
             Data = data;
         }
 
+        public static GameMap FilledWith(CellStatus cellStatus) => new(new CellStatus[,]
+        {
+            { cellStatus, cellStatus, cellStatus, },
+            { cellStatus, cellStatus, cellStatus, },
+            { cellStatus, cellStatus, cellStatus, },
+        });
+
         public GameMap() : this(new CellStatus[GameSize, GameSize]) { }
 
         public GameMap Clone() => new((CellStatus[,])Data.Clone());
@@ -53,8 +60,6 @@ namespace OrleanPG.Grains.Interfaces
             return hash;
         }
 
-        public override string ToString() => ToMapString();
-
         public override bool Equals(object? obj)
         {
             return obj is GameMap map && SequenceEquals(Data, map.Data);
@@ -80,7 +85,7 @@ namespace OrleanPG.Grains.Interfaces
            && Enumerable.Range(0, a.Rank).All(d => a.GetLength(d) == b.GetLength(d))
            && a.Cast<T>().SequenceEqual(b.Cast<T>());
 
-        public bool IsRowFilledBy(int y, CellStatus stepBy)
+        public bool IsColFilledBy(int y, CellStatus stepBy)
         {
             for (var i = 0; i < GameSize; i++)
             {
@@ -96,7 +101,7 @@ namespace OrleanPG.Grains.Interfaces
             return false;
         }
 
-        public bool IsColFilledBy(int x, CellStatus stepBy)
+        public bool IsRowFilledBy(int x, CellStatus stepBy)
         {
             for (var i = 0; i < GameSize; i++)
             {

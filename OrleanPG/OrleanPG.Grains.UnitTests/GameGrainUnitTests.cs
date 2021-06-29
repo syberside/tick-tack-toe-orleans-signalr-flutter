@@ -2,9 +2,12 @@
 using FluentAssertions;
 using Moq;
 using OrleanPG.Grains.Game;
+using OrleanPG.Grains.Game.Engine;
+using OrleanPG.Grains.Game.Engine.Actions;
 using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
+using OrleanPG.Grains.UnitTests.Helpers;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -19,6 +22,7 @@ namespace OrleanPG.Grains.UnitTests
         private readonly Mock<IPersistentState<GameStorageData>> _storeMock;
         private readonly Mock<GameGrain> _mockedGame;
         private readonly Mock<IGrainIdProvider> _idProviderMock;
+        private readonly Mock<IGameEngine> _gameEngineMock;
         private readonly GameGrain _game;
 
 
@@ -26,7 +30,8 @@ namespace OrleanPG.Grains.UnitTests
         {
             _storeMock = PersistanceHelper.CreateAndSetupStateWriteMock<GameStorageData>();
             _idProviderMock = new();
-            _mockedGame = new Mock<GameGrain>(() => new GameGrain(_storeMock.Object, _idProviderMock.Object));
+            _gameEngineMock = new();
+            _mockedGame = new(() => new GameGrain(_storeMock.Object, _idProviderMock.Object, _gameEngineMock.Object));
             // suppress base RegisterOrUpdateReminder calls
             _mockedGame.Setup(x => x.RegisterOrUpdateReminder(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()))
                 .ReturnsAsync(new Mock<IGrainReminder>().Object);
@@ -124,199 +129,54 @@ namespace OrleanPG.Grains.UnitTests
             await act.Should().ThrowAsync<InvalidOperationException>();
         }
 
+        /// <summary>
+        /// TODO: Test to big, split to three parts OR add state change notifier as separate entity
+        /// </summary>
         [Theory, AutoData]
-        public async Task TurnAsync_OnXOutOfGameField_Throws(int y, AuthorizationToken tokenX, AuthorizationToken tokenO)
+        public async Task TurnAsync_OnStateChangedByEngine_StoresChangesAndReturnNewStateAndNotifyObservers(
+            AuthorizationToken tokenX, AuthorizationToken tokenO, string xName, string oName,
+            int x, int y, GameEngineState engineState, Guid grainId)
         {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
-
-
-            Func<Task> act = async () => await _game.TurnAsync(GameMap.GameSize, y, tokenX);
-
-            await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnYOutOfGameField_Throws(int x, AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
-
-            Func<Task> act = async () => await _game.TurnAsync(x, GameMap.GameSize, tokenX);
-
-            await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnCellAlreadyUsed_Throws(int x, int y, AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            x %= GameMap.GameSize;
-            y %= GameMap.GameSize;
-            _storeMock.Object.State.Map[x, y] = CellStatus.X;
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
-
-            Func<Task> act = async () => await _game.TurnAsync(x, y, tokenX);
-
-            await act.Should().ThrowAsync<InvalidOperationException>();
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnXTurn_ReturnsOTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO, string xName, string oName)
-        {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
+            var streamMock = SetupStreamMock(grainId);
+            (x, y) = GameMapTestHelper.AdjustToGameSize(x, y);
+            SetupStoreMockByEngineState(tokenX, tokenO, engineState);
             SetupAuthorizationTokens(tokenX, tokenO, xName, oName);
+            var updatedEngineState = engineState with { GameState = engineState.GameState.AnyExceptThis() };
+            _gameEngineMock
+                .Setup(g => g.Process(new UserTurnAction(x, y, PlayerParticipation.X), engineState))
+                .Returns(updatedEngineState);
 
-            var status = await _game.TurnAsync(0, 0, tokenX);
+            var result = await _game.TurnAsync(x, y, tokenX);
 
-            var gameMap = new GameMap();
-            gameMap[0, 0] = CellStatus.X;
-            status.Should().Be(new GameStatusDto(GameState.OTurn, gameMap, xName, oName));
+            var expectedResult = new GameStatusDto(updatedEngineState.GameState, updatedEngineState.Map, xName, oName);
+            result.Should().BeEquivalentTo(expectedResult);
+            var expectedStorageState = new GameStorageData(tokenX, tokenO, updatedEngineState.GameState, updatedEngineState.Map);
+            _storeMock.Object.State.Should().Be(expectedStorageState);
+            _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
+            streamMock.Verify(x => x.OnNextAsync(expectedResult, null), Times.Once);
         }
 
-        [Theory, AutoData]
-        public async Task TurnAsync_OnXTurn_StoresOTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        private void SetupStoreMockByEngineState(AuthorizationToken tokenX, AuthorizationToken tokenO, GameEngineState engineState)
         {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-            var status = await _game.TurnAsync(0, 0, tokenX);
-
-            var gameMap = new GameMap();
-            gameMap[0, 0] = CellStatus.X;
-            _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.OTurn, gameMap));
-            _storeMock.Verify(x => x.WriteStateAsync(), Times.Exactly(1));
-        }
-
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnOTurn_ReturnsXTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
-            _storeMock.Object.State.Map[0, 0] = CellStatus.X;
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-            var status = await _game.TurnAsync(0, 1, tokenO);
-
-            status.Status.Should().Be(GameState.XTurn, status.GameMap.ToMapString());
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnOTurn_StoresXTurnAndChangedMap(AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
-            _storeMock.Object.State.Map[0, 0] = CellStatus.X;
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-            var status = await _game.TurnAsync(0, 1, tokenO);
-
-            var gameMap = new GameMap();
-            gameMap[0, 0] = CellStatus.X;
-            gameMap[0, 1] = CellStatus.O;
-            _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.XTurn, gameMap));
-            _storeMock.Verify(x => x.WriteStateAsync(), Times.Exactly(1));
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnWinByHorizontallLine_DetectsWin(AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            var gameMap = new CellStatus[,]
-            {
-                {CellStatus.X,  CellStatus.X, CellStatus.Empty, },
-                {CellStatus.O, CellStatus.O, CellStatus.Empty, },
-                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
-            };
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-            var status = await _game.TurnAsync(0, GameMap.GameSize - 1, tokenX);
-
-            status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
-            _storeMock.Object.State.Status.Should().Be(GameState.XWin);
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnWinByVerticallLine_DetectsWin(AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            var gameMap = new CellStatus[,]
-            {
-                {CellStatus.X,  CellStatus.Empty, CellStatus.Empty, },
-                {CellStatus.X,  CellStatus.Empty, CellStatus.Empty, },
-                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
-            };
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-            var status = await _game.TurnAsync(GameMap.GameSize - 1, 0, tokenX);
-
-            status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
-            _storeMock.Object.State.Status.Should().Be(GameState.XWin);
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnWinByDiagonal1Line_DetectsWin(AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            var gameMap = new CellStatus[,]
-            {
-                {CellStatus.X,  CellStatus.Empty, CellStatus.Empty, },
-                {CellStatus.Empty,  CellStatus.X, CellStatus.Empty, },
-                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
-            };
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-            var status = await _game.TurnAsync(GameMap.GameSize - 1, GameMap.GameSize - 1, tokenX);
-
-            status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
-            _storeMock.Object.State.Status.Should().Be(GameState.XWin);
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnWinByDiagonal2Line_DetectsWin(AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            var gameMap = new CellStatus[,]
-            {
-                {CellStatus.Empty,  CellStatus.Empty, CellStatus.X, },
-                {CellStatus.Empty,  CellStatus.X, CellStatus.Empty, },
-                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
-            };
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Map = new GameMap(gameMap) };
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-
-            var status = await _game.TurnAsync(GameMap.GameSize - 1, 0, tokenX);
-
-            status.Status.Should().Be(GameState.XWin, status.GameMap.ToMapString());
-            _storeMock.Object.State.Status.Should().Be(GameState.XWin);
-        }
-
-        [Theory, AutoData]
-        public async Task TurnAsync_OnLastCell_DetectsDraw(AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            var gameMap = new CellStatus[,]
-            {
-                {CellStatus.X,  CellStatus.O, CellStatus.X, },
-                {CellStatus.O,  CellStatus.X, CellStatus.O, },
-                {CellStatus.O,  CellStatus.X, CellStatus.Empty, },
-            };
             _storeMock.Object.State = _storeMock.Object.State with
             {
                 XPlayer = tokenX,
                 OPlayer = tokenO,
-                Map = new GameMap(gameMap),
-                Status = GameState.OTurn,
+                Map = engineState.Map,
+                Status = engineState.GameState,
             };
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-
-            var status = await _game.TurnAsync(2, 2, tokenO);
-
-            status.Status.Should().Be(GameState.Draw, status.GameMap.ToMapString());
-            _storeMock.Object.State.Status.Should().Be(GameState.Draw);
         }
 
         [Theory, AutoData]
-        public async Task TurnAsync_OnXTurn_ResetsTimeoutReminder(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        public async Task TurnAsync_OnXTurn_ResetsTimeoutReminder(
+            AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
+            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
             SetupAuthorizationTokens(tokenX, tokenO);
+            var engineState = new GameEngineState(_storeMock.Object.State.Map, _storeMock.Object.State.Status);
+            _gameEngineMock
+                .Setup(g => g.Process(new UserTurnAction(0, 0, PlayerParticipation.X), engineState))
+                .Returns(engineState);
 
             await _game.TurnAsync(0, 0, tokenX);
 
@@ -324,104 +184,48 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task TurnAsync_OnYTurn_ResetsTimeoutReminder(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        public async Task TurnAsync_OnYTurn_ResetsTimeoutReminder(
+            AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
             _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
             SetupAuthorizationTokens(tokenX, tokenO);
+            var engineState = new GameEngineState(_storeMock.Object.State.Map, _storeMock.Object.State.Status);
+            _gameEngineMock
+                .Setup(g => g.Process(new UserTurnAction(0, 0, PlayerParticipation.O), engineState))
+                .Returns(engineState);
 
             await _game.TurnAsync(0, 0, tokenO);
 
             _mockedGame.Verify(x => x.RegisterOrUpdateReminder(GameGrain.TimeoutCheckReminderName, GameGrain.TimeoutPeriod, GameGrain.TimeoutPeriod));
         }
+        #endregion
 
+        /// <summary>
+        /// TODO: Test is too big
+        /// </summary>
         [Theory, AutoData]
-        public async Task TurnAsync_OnValidTurn_NotifySubsribers(AuthorizationToken tokenX, AuthorizationToken tokenO,
-            string xName, string oName, Guid grainId)
+        public async Task ReceiveReminder_OnStateChangedByEngine_StoresChangesAndNotifyObserversAndUnregisterReminder(
+            GameStorageData storageData, Guid grainId, string xName, string oName)
         {
+            SetupAuthorizationTokens(storageData.XPlayer, storageData.OPlayer, xName, oName);
             var streamMock = SetupStreamMock(grainId);
-
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO };
-            SetupAuthorizationTokens(tokenX, tokenO, xName, oName);
-
-            await _game.TurnAsync(0, 0, tokenX);
-
-            var gameMap = new CellStatus[,]
-            {
-                {CellStatus.X,  CellStatus.Empty, CellStatus.Empty, },
-                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
-                {CellStatus.Empty,  CellStatus.Empty, CellStatus.Empty, },
-            };
-            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.OTurn, new GameMap(gameMap), xName, oName), null), Times.Once);
-        }
-        #endregion
-
-        #region
-        [Theory]
-        [InlineAutoData(GameState.TimedOut)]
-        [InlineAutoData(GameState.Draw)]
-        [InlineAutoData(GameState.XWin)]
-        [InlineAutoData(GameState.OWin)]
-        public async Task ReceiveReminder_OnGameInEndState_CancelsReminder(GameState gameState)
-        {
             var reminderMock = new Mock<IGrainReminder>();
             _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             var _game = _mockedGame.Object;
-            _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
+            _storeMock.Object.State = storageData;
+            var gameEngineState = new GameEngineState(storageData.Map, storageData.Status);
+            var updatedEngineState = gameEngineState with { GameState = gameEngineState.GameState.AnyExceptThis() };
+            _gameEngineMock.Setup(x => x.Process(TimeOutAction.Instance, gameEngineState))
+                .Returns(updatedEngineState);
 
             await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
-            _storeMock.Object.State.Status.Should().Be(gameState);
-            _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
-
-        }
-
-        [Theory]
-        [InlineAutoData(GameState.OTurn)]
-        [InlineAutoData(GameState.XTurn)]
-        public async Task ReceiveReminder_OnGameInNotEndState_EndsGame(GameState gameState)
-        {
-            var reminderMock = new Mock<IGrainReminder>();
-            _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
-            _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
-            SetupAuthorizationTokens();
-
-            await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
-
-            _storeMock.Object.State.Status.Should().Be(GameState.TimedOut);
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
-        }
-
-        [Theory]
-        [InlineAutoData(GameState.OTurn)]
-        [InlineAutoData(GameState.XTurn)]
-        public async Task ReceiveReminder_OnGameInNotEndState_CancelsReminder(GameState gameState)
-        {
-            var reminderMock = new Mock<IGrainReminder>();
-            _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
-            _storeMock.Object.State = _storeMock.Object.State with { Status = gameState };
-            SetupAuthorizationTokens();
-
-            await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
-
+            _storeMock.Object.State.Should().Be(storageData with { Status = updatedEngineState.GameState });
+            var expectedResult = new GameStatusDto(updatedEngineState.GameState, updatedEngineState.Map, xName, oName);
+            streamMock.Verify(x => x.OnNextAsync(expectedResult, null), Times.Once);
             _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
         }
-
-
-        [Theory]
-        [InlineAutoData(GameState.OTurn)]
-        [InlineAutoData(GameState.XTurn)]
-        public async Task ReceiveReminder_OnGameInNotEndState_NotifyObservers(GameState gameState, GameStorageData gameData, Guid grainId, string xName, string oName)
-        {
-            var streamMock = SetupStreamMock(grainId);
-            var _game = _mockedGame.Object;
-            _storeMock.Object.State = gameData with { Status = gameState };
-            SetupAuthorizationTokens(gameData.XPlayer, gameData.OPlayer, xName, oName);
-
-            await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
-
-            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(GameState.TimedOut, gameData.Map, xName, oName), null), Times.Once);
-        }
-        #endregion
 
         #region Helpers
         private void SetupAuthorizationTokens(AuthorizationToken?[] tokens, string?[] userNames)

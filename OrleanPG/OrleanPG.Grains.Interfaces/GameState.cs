@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace OrleanPG.Grains.Interfaces
 {
@@ -30,5 +32,16 @@ namespace OrleanPG.Grains.Interfaces
                     throw new NotImplementedException();
             }
         }
+
+        private static GameState[] _values = new[]
+        {
+            GameState.XTurn, GameState.XWin,
+            GameState.OTurn, GameState.OWin,
+            GameState.Draw, GameState.TimedOut,
+        };
+
+        public static IReadOnlyCollection<GameState> Values() => Array.AsReadOnly(_values);
+
+        public static GameState AnyExceptThis(this GameState @this) => Values().First(x => x != @this);
     }
 }

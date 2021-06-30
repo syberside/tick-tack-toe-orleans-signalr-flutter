@@ -90,11 +90,10 @@ namespace OrleanPG.Grains.Game
                 throw new InvalidOperationException("Game is not initialized yet");
             }
 
-            var engineState = State;
             var turn = new UserTurnAction(x, y, GetParticipation(player));
-            var newState = _gameEngine.Process(turn, engineState);
+            var newState = _gameEngine.Process(turn, State);
 
-            await UpdateStateIfChanged(engineState, newState);
+            await UpdateStateIfChanged(State, newState);
 
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
 
@@ -128,10 +127,9 @@ namespace OrleanPG.Grains.Game
 
         private async Task CheckTimeout()
         {
-            var engineState = State;
-            var newState = _gameEngine.Process(TimeOutAction.Instance, engineState);
+            var newState = _gameEngine.Process(TimeOutAction.Instance, State);
 
-            await UpdateStateIfChanged(engineState, newState);
+            await UpdateStateIfChanged(State, newState);
 
             var reminder = await GetReminder(TimeoutCheckReminderName);
             await UnregisterReminder(reminder);

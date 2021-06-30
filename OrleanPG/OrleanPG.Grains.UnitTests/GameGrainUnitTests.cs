@@ -138,16 +138,16 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State = state;
             var streamMock = SetupStreamMock(grainId);
             SetupAuthorizationTokens(state, xName, oName);
-            var updatedEngineState = state with { Status = state.Status.AnyExceptThis() };
+            var updatedState = state with { Status = state.Status.AnyExceptThis() };
             _gameEngineMock
                 .Setup(g => g.Process(new UserTurnAction(position.X, position.Y, PlayerParticipation.X), state))
-                .Returns(updatedEngineState);
+                .Returns(updatedState);
 
             var result = await _game.TurnAsync(position.X, position.Y, state.XPlayer!);
 
-            var expectedResult = new GameStatusDto(updatedEngineState.Status, updatedEngineState.Map, xName, oName);
+            var expectedResult = new GameStatusDto(updatedState.Status, updatedState.Map, xName, oName);
             result.Should().BeEquivalentTo(expectedResult);
-            _storeMock.Object.State.Should().Be(updatedEngineState);
+            _storeMock.Object.State.Should().Be(updatedState);
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
             streamMock.Verify(x => x.OnNextAsync(expectedResult, null), Times.Once);
         }
@@ -189,23 +189,23 @@ namespace OrleanPG.Grains.UnitTests
         /// </summary>
         [Theory, AutoData]
         public async Task ReceiveReminder_OnStateChangedByEngine_StoresChangesAndNotifyObserversAndUnregisterReminder(
-            GameState storageData, Guid grainId, string xName, string oName)
+            GameState state, Guid grainId, string xName, string oName)
         {
-            SetupAuthorizationTokens(storageData.XPlayer, storageData.OPlayer, xName, oName);
+            SetupAuthorizationTokens(state.XPlayer, state.OPlayer, xName, oName);
             var streamMock = SetupStreamMock(grainId);
             var reminderMock = new Mock<IGrainReminder>();
             _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             var _game = _mockedGame.Object;
-            _storeMock.Object.State = storageData;
-            var updatedEngineState = storageData with { Status = storageData.Status.AnyExceptThis() };
-            _gameEngineMock.Setup(x => x.Process(TimeOutAction.Instance, storageData))
-                .Returns(updatedEngineState);
+            _storeMock.Object.State = state;
+            var updatedState = state with { Status = state.Status.AnyExceptThis() };
+            _gameEngineMock.Setup(x => x.Process(TimeOutAction.Instance, state))
+                .Returns(updatedState);
 
             await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
-            _storeMock.Object.State.Should().Be(storageData with { Status = updatedEngineState.Status });
-            var expectedResult = new GameStatusDto(updatedEngineState.Status, updatedEngineState.Map, xName, oName);
+            _storeMock.Object.State.Should().Be(state with { Status = updatedState.Status });
+            var expectedResult = new GameStatusDto(updatedState.Status, updatedState.Map, xName, oName);
             streamMock.Verify(x => x.OnNextAsync(expectedResult, null), Times.Once);
             _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
         }

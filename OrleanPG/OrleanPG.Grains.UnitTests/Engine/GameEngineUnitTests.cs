@@ -25,10 +25,10 @@ namespace OrleanPG.Grains.UnitTests.Engine
 
         [Theory]
         [AutoData]
-        public void Process_OnUnknownAction_Throws(GameState engineState)
+        public void Process_OnUnknownAction_Throws(GameState state)
         {
             var arg = new ActionMock();
-            Action action = () => _gameEngine.Process(arg, engineState);
+            Action action = () => _gameEngine.Process(arg, state);
 
             action.Should().Throw<NotSupportedException>();
         }
@@ -42,24 +42,24 @@ namespace OrleanPG.Grains.UnitTests.Engine
         [InlineAutoData(GameStatus.Draw)]
         [InlineAutoData(GameStatus.XWin)]
         [InlineAutoData(GameStatus.OWin)]
-        public void Process_TimeOutAction_OnFinalState_ReturnsUnchangedState(GameStatus state, GameState engineState)
+        public void Process_TimeOutAction_OnFinalState_ReturnsUnchangedState(GameStatus status, GameState state)
         {
-            engineState = engineState with { Status = state };
+            state = state with { Status = status };
 
-            var result = _gameEngine.Process(TimeOutAction.Instance, engineState);
+            var result = _gameEngine.Process(TimeOutAction.Instance, state);
 
-            result.Should().BeEquivalentTo(engineState);
+            result.Should().BeEquivalentTo(state);
         }
 
         [Theory]
         [InlineAutoData(GameStatus.XTurn)]
         [InlineAutoData(GameStatus.OTurn)]
-        public void Process_TimeOutAction_OnNotFinalState_EndsGame(GameStatus state, GameState engineState)
+        public void Process_TimeOutAction_OnNotFinalState_EndsGame(GameStatus status, GameState state)
         {
-            engineState = engineState with { Status = state };
+            state = state with { Status = status };
 
-            var result = _gameEngine.Process(TimeOutAction.Instance, engineState);
-            var expected = engineState with { Status = GameStatus.TimedOut };
+            var result = _gameEngine.Process(TimeOutAction.Instance, state);
+            var expected = state with { Status = GameStatus.TimedOut };
 
             result.Should().BeEquivalentTo(expected);
         }
@@ -70,11 +70,11 @@ namespace OrleanPG.Grains.UnitTests.Engine
         [Theory]
         [AutoData]
         public void Process_UserTurnAction_OnCellAlreadyInUse_Throws(
-            RandomValidXY position, PlayerParticipation participation, GameState engineState)
+            RandomValidXY position, PlayerParticipation participation, GameState state)
         {
-            engineState.Map[position.X, position.Y] = CellStatus.X;
+            state.Map[position.X, position.Y] = CellStatus.X;
 
-            Action action = () => _gameEngine.Process(new UserTurnAction(position.X, position.Y, participation), engineState);
+            Action action = () => _gameEngine.Process(new UserTurnAction(position.X, position.Y, participation), state);
 
             action.Should().Throw<InvalidOperationException>();
         }
@@ -83,19 +83,19 @@ namespace OrleanPG.Grains.UnitTests.Engine
         [InlineAutoData(PlayerParticipation.X, CellStatus.X, GameStatus.XTurn, GameStatus.OTurn)]
         [InlineAutoData(PlayerParticipation.O, CellStatus.O, GameStatus.OTurn, GameStatus.XTurn)]
         public void Process_UserTurnAction_OnFreeCell_ReturnsNextTurnState(
-            PlayerParticipation participation, CellStatus cellStatus, GameStatus gameState,
+            PlayerParticipation participation, CellStatus cellStatus, GameStatus status,
             GameStatus expectedState,
-            RandomValidXY position, GameState engineState)
+            RandomValidXY position, GameState state)
         {
-            engineState = engineState with { Status = gameState };
-            engineState.Map[position.X, position.Y] = CellStatus.Empty;
+            state = state with { Status = status };
+            state.Map[position.X, position.Y] = CellStatus.Empty;
             var action = new UserTurnAction(position.X, position.Y, participation);
 
-            var result = _gameEngine.Process(action, engineState);
+            var result = _gameEngine.Process(action, state);
 
-            var expectedMap = engineState.Map.Clone();
+            var expectedMap = state.Map.Clone();
             expectedMap[position.X, position.Y] = cellStatus;
-            var expectedResult = engineState with { Status = expectedState, Map = expectedMap };
+            var expectedResult = state with { Status = expectedState, Map = expectedMap };
             result.Should().BeEquivalentTo(expectedResult);
         }
 
@@ -104,15 +104,15 @@ namespace OrleanPG.Grains.UnitTests.Engine
         [InlineAutoData(CellStatus.X, GameStatus.XTurn, PlayerParticipation.X)]
         [InlineAutoData(CellStatus.O, GameStatus.OTurn, PlayerParticipation.O)]
         public void Process_UserTurnAction_OnLastCell_ReturnsDrawState(
-            CellStatus cellStatus, GameStatus gameState, PlayerParticipation participation,
+            CellStatus cellStatus, GameStatus status, PlayerParticipation participation,
             RandomValidXY position)
         {
             var map = GameMap.FilledWith(cellStatus);
             map[position.X, position.Y] = CellStatus.Empty;
-            var engineState = new GameState(null, null, gameState, map);
+            var state = new GameState(null, null, status, map);
             var action = new UserTurnAction(position.X, position.Y, participation);
 
-            var result = _gameEngine.Process(action, engineState);
+            var result = _gameEngine.Process(action, state);
 
             var expectedMap = GameMap.FilledWith(cellStatus);
             var expectedResult = new GameState(null, null, GameStatus.Draw, expectedMap);

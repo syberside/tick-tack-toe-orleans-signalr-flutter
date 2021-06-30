@@ -55,13 +55,13 @@ namespace OrleanPG.Grains.Game.Engine
             return state with { Status = status, Map = updatedMap };
         }
 
-        private GameState Process(TimeOutAction _, GameState engineState)
+        private GameState Process(TimeOutAction _, GameState state)
         {
-            if (engineState.Status.IsEndStatus())
+            if (state.Status.IsEndStatus())
             {
-                return engineState;
+                return state;
             }
-            return engineState with { Status = GameStatus.TimedOut };
+            return state with { Status = GameStatus.TimedOut };
         }
 
         private static GameMap UpdateMap(int x, int y, GameMap map, CellStatus stepMarker)

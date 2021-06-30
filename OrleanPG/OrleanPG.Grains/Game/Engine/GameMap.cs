@@ -1,24 +1,28 @@
-﻿using System;
+﻿using OrleanPG.Grains.Interfaces;
+using OrleanPG.Grains.Interfaces.Infrastructure;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace OrleanPG.Grains.Interfaces
+namespace OrleanPG.Grains.Game.Engine
 {
     public class GameMap
     {
-        // TODO: Could be broken via direct access as array. Need to create separate DTO for transfering
-        public CellStatus[,] Data { get; init; }
+        private CellStatus[,] Data { get; }
+
+        public GameMap(CellStatus[,] arrayToClone)
+        {
+            Data = (CellStatus[,])arrayToClone.Clone();
+        }
 
         public bool HaveEmptyCells => EnumerateAvailableCells().Any();
-        public GameMap(CellStatus[,] data)
-        {
-            Data = data;
-        }
+
+        public CellStatus[,] DataSnapshot() => (CellStatus[,])Data.Clone();
+
 
         public GameMap Update(GameMapPoint position, CellStatus status)
         {
-            var result = Clone();
+            var result = new GameMap(Data);
             result[position.X, position.Y] = status;
             return result;
         }
@@ -31,8 +35,6 @@ namespace OrleanPG.Grains.Interfaces
         });
 
         public GameMap() : this(new CellStatus[GameMapPoint.GameSize, GameMapPoint.GameSize]) { }
-
-        public GameMap Clone() => new((CellStatus[,])Data.Clone());
 
         private CellStatus this[int x, int y]
         {
@@ -72,7 +74,7 @@ namespace OrleanPG.Grains.Interfaces
 
         public override bool Equals(object? obj)
         {
-            return obj is GameMap map && SequenceEquals(Data, map.Data);
+            return obj is GameMap map && Data.SequenceEquals(map.Data);
         }
 
         public GameMapPoint[] GetAvailableCells() => EnumerateAvailableCells().ToArray();
@@ -90,10 +92,6 @@ namespace OrleanPG.Grains.Interfaces
                 }
             }
         }
-
-        private static bool SequenceEquals<T>(T[,] a, T[,] b) => a.Rank == b.Rank
-           && Enumerable.Range(0, a.Rank).All(d => a.GetLength(d) == b.GetLength(d))
-           && a.Cast<T>().SequenceEqual(b.Cast<T>());
 
         public bool IsColFilledBy(int y, CellStatus stepBy)
         {

@@ -1,6 +1,4 @@
-﻿using OrleanPG.Grains.Interfaces;
-
-namespace OrleanPG.Grains.Game.Engine.WinCheckers
+﻿namespace OrleanPG.Grains.Game.Engine.WinCheckers
 {
     public interface IWinChecker
     {

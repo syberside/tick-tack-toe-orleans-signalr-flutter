@@ -145,7 +145,8 @@ namespace OrleanPG.Grains.UnitTests
 
             var result = await _game.TurnAsync(position, state.XPlayer!);
 
-            var expectedResult = new GameStatusDto(updatedState.Status, updatedState.Map, xName, oName);
+            var gameMapDto = new GameMapDto(updatedState.Map.DataSnapshot());
+            var expectedResult = new GameStatusDto(updatedState.Status, gameMapDto, xName, oName);
             result.Should().BeEquivalentTo(expectedResult);
             _storeMock.Object.State.Should().Be(updatedState);
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
@@ -205,7 +206,8 @@ namespace OrleanPG.Grains.UnitTests
 
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
             _storeMock.Object.State.Should().Be(state with { Status = updatedState.Status });
-            var expectedResult = new GameStatusDto(updatedState.Status, updatedState.Map, xName, oName);
+            var gameMapDto = new GameMapDto(updatedState.Map.DataSnapshot());
+            var expectedResult = new GameStatusDto(updatedState.Status, gameMapDto, xName, oName);
             streamMock.Verify(x => x.OnNextAsync(expectedResult, null), Times.Once);
             _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
         }

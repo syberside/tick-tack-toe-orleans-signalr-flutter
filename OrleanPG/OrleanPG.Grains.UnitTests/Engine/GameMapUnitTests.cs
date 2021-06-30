@@ -1,8 +1,10 @@
 using FluentAssertions;
 using FluentAssertions.Execution;
+using OrleanPG.Grains.Game.Engine;
+using OrleanPG.Grains.Interfaces;
 using Xunit;
 
-namespace OrleanPG.Grains.Interfaces.UnitTests
+namespace OrleanPG.Grains.Engine.UnitTests
 {
     public class GameMapUnitTests
     {

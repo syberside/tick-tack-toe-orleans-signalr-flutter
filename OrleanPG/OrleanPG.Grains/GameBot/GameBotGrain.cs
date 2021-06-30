@@ -1,4 +1,5 @@
-﻿using OrleanPG.Grains.Infrastructure;
+﻿using OrleanPG.Grains.Game.Engine;
+using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Runtime;
@@ -56,7 +57,8 @@ namespace OrleanPG.Grains.GameBot
                 return;
             }
 
-            var nextTurnPosition = GetNextTurn(update);
+            var gameMap = new GameMap(update.GameMap.Data);
+            var nextTurnPosition = GetNextTurn(gameMap);
             var authToken = _botData.State.Token;
 
             var game = GrainFactory.GetGrain<IGame>(grainId);
@@ -72,9 +74,9 @@ namespace OrleanPG.Grains.GameBot
             await _botData.ClearStateAsync();
         }
 
-        private GameMapPoint GetNextTurn(GameStatusDto update)
+        private GameMapPoint GetNextTurn(GameMap gameMap)
         {
-            var availableCells = update.GameMap.GetAvailableCells();
+            var availableCells = gameMap.GetAvailableCells();
             var randomPosition = _random.Next(availableCells.Length);
             return availableCells[randomPosition];
         }

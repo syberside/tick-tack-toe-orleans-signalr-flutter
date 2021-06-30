@@ -165,7 +165,8 @@ namespace OrleanPG.Grains.Game
         {
             var lobby = GrainFactory.GetGrain<IGameLobby>(Guid.Empty);
             var userNames = await lobby.ResolveUserNamesAsync(State.XPlayer, State.OPlayer);
-            return new GameStatusDto(State.Status, State.Map, userNames[0], userNames[1]);
+            var gameMapDto = new GameMapDto(State.Map.DataSnapshot());
+            return new GameStatusDto(State.Status, gameMapDto, userNames[0], userNames[1]);
         }
     }
 }

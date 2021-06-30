@@ -18,6 +18,14 @@ namespace OrleanPG.Grains.Interfaces
             Data = data;
         }
 
+        // TODO: Make immutable and use only this. rename
+        public GameMap Updated(GameMapPoint position, CellStatus status)
+        {
+            var result = Clone();
+            result[position] = status;
+            return result;
+        }
+
         public static GameMap FilledWith(CellStatus cellStatus) => new(new CellStatus[,]
         {
             { cellStatus, cellStatus, cellStatus, },
@@ -29,10 +37,17 @@ namespace OrleanPG.Grains.Interfaces
 
         public GameMap Clone() => new((CellStatus[,])Data.Clone());
 
+        // TODO: replace with point
         public CellStatus this[int x, int y]
         {
             get => Data[x, y];
             set => Data[x, y] = value;
+        }
+
+        public CellStatus this[GameMapPoint position]
+        {
+            get => this[position.X, position.Y];
+            set => this[position.X, position.Y] = value;
         }
 
         public string ToMapString(string separator = " | ", string emptyValue = " ", string xValue = "X", string oValue = "O")
@@ -65,9 +80,9 @@ namespace OrleanPG.Grains.Interfaces
             return obj is GameMap map && SequenceEquals(Data, map.Data);
         }
 
-        public (int x, int y)[] GetAvailableCells() => EnumerateAvailableCells().ToArray();
+        public GameMapPoint[] GetAvailableCells() => EnumerateAvailableCells().ToArray();
 
-        private IEnumerable<(int x, int y)> EnumerateAvailableCells()
+        private IEnumerable<GameMapPoint> EnumerateAvailableCells()
         {
             for (var x = 0; x < GameSize; x++)
             {
@@ -75,7 +90,7 @@ namespace OrleanPG.Grains.Interfaces
                 {
                     if (this[x, y] == CellStatus.Empty)
                     {
-                        yield return (x, y);
+                        yield return new GameMapPoint(x, y);
                     }
                 }
             }
@@ -149,6 +164,6 @@ namespace OrleanPG.Grains.Interfaces
             return false;
         }
 
-        public bool IsCellBusy(int x, int y) => this[x, y] != CellStatus.Empty;
+        public bool IsCellBusy(GameMapPoint point) => this[point.X, point.Y] != CellStatus.Empty;
     }
 }

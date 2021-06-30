@@ -93,7 +93,7 @@ namespace OrleanPG.Grains.UnitTests
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
 #pragma warning disable CS8604 // Possible null reference argument.
-            gameMock.Verify(x => x.TurnAsync(It.IsAny<int>(), It.IsAny<int>(), botState.Token));
+            gameMock.Verify(x => x.TurnAsync(It.IsAny<GameMapPoint>(), botState.Token));
 #pragma warning restore CS8604 // Possible null reference argument.
         }
 

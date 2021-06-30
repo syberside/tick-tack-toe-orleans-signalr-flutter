@@ -58,7 +58,7 @@ namespace SignalR_PG.WebAPI.Hubs
         public async Task Turn(int x, int y, string authToken, Guid gameId)
         {
             var lobby = _clusterClient.GetGrain<IGame>(gameId);
-            var result = await lobby.TurnAsync(x, y, new AuthorizationToken(authToken));
+            var result = await lobby.TurnAsync(new GameMapPoint(x, y), new AuthorizationToken(authToken));
         }
 
         public async Task AddBot(Guid gameId, string authenticationToken)

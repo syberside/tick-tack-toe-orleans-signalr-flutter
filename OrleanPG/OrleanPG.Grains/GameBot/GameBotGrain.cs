@@ -3,9 +3,8 @@ using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
-using System.Threading.Tasks;
-using System.Linq;
 using System;
+using System.Threading.Tasks;
 
 namespace OrleanPG.Grains.GameBot
 {
@@ -57,11 +56,11 @@ namespace OrleanPG.Grains.GameBot
                 return;
             }
 
-            (int x, int y) = GetNextTurn(update);
+            var nextTurnPosition = GetNextTurn(update);
             var authToken = _botData.State.Token;
 
             var game = GrainFactory.GetGrain<IGame>(grainId);
-            await game.TurnAsync(x, y, authToken);
+            await game.TurnAsync(nextTurnPosition, authToken);
         }
 
         private async Task CleanupAsync()
@@ -73,7 +72,7 @@ namespace OrleanPG.Grains.GameBot
             await _botData.ClearStateAsync();
         }
 
-        private (int x, int y) GetNextTurn(GameStatusDto update)
+        private GameMapPoint GetNextTurn(GameStatusDto update)
         {
             var availableCells = update.GameMap.GetAvailableCells();
             var randomPosition = _random.Next(availableCells.Length);

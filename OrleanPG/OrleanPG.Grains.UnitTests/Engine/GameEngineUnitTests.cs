@@ -70,11 +70,11 @@ namespace OrleanPG.Grains.UnitTests.Engine
         [Theory]
         [AutoData]
         public void Process_UserTurnAction_OnCellAlreadyInUse_Throws(
-            RandomValidXY position, PlayerParticipation participation, GameState state)
+            RandomizableMapPoint position, PlayerParticipation participation, GameState state)
         {
             state.Map[position.X, position.Y] = CellStatus.X;
 
-            Action action = () => _gameEngine.Process(new UserTurnAction(position.X, position.Y, participation), state);
+            Action action = () => _gameEngine.Process(new UserTurnAction(position, participation), state);
 
             action.Should().Throw<InvalidOperationException>();
         }
@@ -85,11 +85,11 @@ namespace OrleanPG.Grains.UnitTests.Engine
         public void Process_UserTurnAction_OnFreeCell_ReturnsNextTurnState(
             PlayerParticipation participation, CellStatus cellStatus, GameStatus status,
             GameStatus expectedState,
-            RandomValidXY position, GameState state)
+            RandomizableMapPoint position, GameState state)
         {
             state = state with { Status = status };
             state.Map[position.X, position.Y] = CellStatus.Empty;
-            var action = new UserTurnAction(position.X, position.Y, participation);
+            var action = new UserTurnAction(position, participation);
 
             var result = _gameEngine.Process(action, state);
 
@@ -105,12 +105,12 @@ namespace OrleanPG.Grains.UnitTests.Engine
         [InlineAutoData(CellStatus.O, GameStatus.OTurn, PlayerParticipation.O)]
         public void Process_UserTurnAction_OnLastCell_ReturnsDrawState(
             CellStatus cellStatus, GameStatus status, PlayerParticipation participation,
-            RandomValidXY position)
+            RandomizableMapPoint position)
         {
             var map = GameMap.FilledWith(cellStatus);
             map[position.X, position.Y] = CellStatus.Empty;
             var state = new GameState(null, null, status, map);
-            var action = new UserTurnAction(position.X, position.Y, participation);
+            var action = new UserTurnAction(position, participation);
 
             var result = _gameEngine.Process(action, state);
 

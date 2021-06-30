@@ -30,11 +30,11 @@ namespace OrleanPG.Grains.Game.Engine
 
         private GameState Process(UserTurnAction action, GameState state)
         {
-            var x = action.X;
-            var y = action.Y;
             var map = state.Map;
-            if (map.IsCellBusy(x, y))
+            if (map.IsCellBusy(action.Position))
             {
+                var x = action.Position.X;
+                var y = action.Position.Y;
                 throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(map[x, y] == CellStatus.X ? "X" : "O")}");
             }
 
@@ -49,7 +49,7 @@ namespace OrleanPG.Grains.Game.Engine
                 throw new InvalidOperationException();
             }
 
-            var updatedMap = UpdateMap(x, y, map, stepMarker);
+            var updatedMap = map.Updated(action.Position, stepMarker);
             var status = GetNewStatus(action.StepBy, updatedMap);
 
             return state with { Status = status, Map = updatedMap };
@@ -62,13 +62,6 @@ namespace OrleanPG.Grains.Game.Engine
                 return state;
             }
             return state with { Status = GameStatus.TimedOut };
-        }
-
-        private static GameMap UpdateMap(int x, int y, GameMap map, CellStatus stepMarker)
-        {
-            var updatedMap = map.Clone();
-            updatedMap[x, y] = stepMarker;
-            return updatedMap;
         }
 
         private GameStatus GetNewStatus(PlayerParticipation stepBy, GameMap map)

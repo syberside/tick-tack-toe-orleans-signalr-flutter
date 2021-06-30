@@ -83,14 +83,14 @@ namespace OrleanPG.Grains.Game
         }
 
 
-        public async Task<GameStatusDto> TurnAsync(int x, int y, AuthorizationToken player)
+        public async Task<GameStatusDto> TurnAsync(GameMapPoint position, AuthorizationToken player)
         {
             if (!State.IsInitialized)
             {
                 throw new InvalidOperationException("Game is not initialized yet");
             }
 
-            var turn = new UserTurnAction(x, y, GetParticipation(player));
+            var turn = new UserTurnAction(position, GetParticipation(player));
             var newState = _gameEngine.Process(turn, State);
 
             await UpdateStateIfChanged(State, newState);

@@ -122,9 +122,9 @@ namespace OrleanPG.Grains.UnitTests
 
         #region
         [Theory, AutoData]
-        public async Task TurnAsync_OnNotInitialized_Throws(RandomValidXY position, AuthorizationToken token)
+        public async Task TurnAsync_OnNotInitialized_Throws(RandomizableMapPoint position, AuthorizationToken token)
         {
-            Func<Task> act = async () => await _game.TurnAsync(position.X, position.Y, token);
+            Func<Task> act = async () => await _game.TurnAsync(position, token);
             await act.Should().ThrowAsync<InvalidOperationException>();
         }
 
@@ -133,17 +133,17 @@ namespace OrleanPG.Grains.UnitTests
         /// </summary>
         [Theory, AutoData]
         public async Task TurnAsync_OnStateChangedByEngine_StoresChangesAndReturnNewStateAndNotifyObservers(
-            GameState state, string xName, string oName, RandomValidXY position, Guid grainId)
+            GameState state, string xName, string oName, RandomizableMapPoint position, Guid grainId)
         {
             _storeMock.Object.State = state;
             var streamMock = SetupStreamMock(grainId);
             SetupAuthorizationTokens(state, xName, oName);
             var updatedState = state with { Status = state.Status.AnyExceptThis() };
             _gameEngineMock
-                .Setup(g => g.Process(new UserTurnAction(position.X, position.Y, PlayerParticipation.X), state))
+                .Setup(g => g.Process(new UserTurnAction(position, PlayerParticipation.X), state))
                 .Returns(updatedState);
 
-            var result = await _game.TurnAsync(position.X, position.Y, state.XPlayer!);
+            var result = await _game.TurnAsync(position, state.XPlayer!);
 
             var expectedResult = new GameStatusDto(updatedState.Status, updatedState.Map, xName, oName);
             result.Should().BeEquivalentTo(expectedResult);
@@ -160,10 +160,10 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State = state;
             SetupAuthorizationTokens(tokenX, tokenO);
             _gameEngineMock
-                .Setup(g => g.Process(new UserTurnAction(0, 0, PlayerParticipation.X), state))
+                .Setup(g => g.Process(new UserTurnAction(GameMapPoint.Origin, PlayerParticipation.X), state))
                 .Returns(state);
 
-            await _game.TurnAsync(0, 0, tokenX);
+            await _game.TurnAsync(GameMapPoint.Origin, tokenX);
 
             _mockedGame.Verify(x => x.RegisterOrUpdateReminder(GameGrain.TimeoutCheckReminderName, GameGrain.TimeoutPeriod, GameGrain.TimeoutPeriod));
         }
@@ -175,10 +175,10 @@ namespace OrleanPG.Grains.UnitTests
             _storeMock.Object.State = state;
             SetupAuthorizationTokens(tokenX, tokenO);
             _gameEngineMock
-                .Setup(g => g.Process(new UserTurnAction(0, 0, PlayerParticipation.O), state))
+                .Setup(g => g.Process(new UserTurnAction(GameMapPoint.Origin, PlayerParticipation.O), state))
                 .Returns(state);
 
-            await _game.TurnAsync(0, 0, tokenO);
+            await _game.TurnAsync(GameMapPoint.Origin, tokenO);
 
             _mockedGame.Verify(x => x.RegisterOrUpdateReminder(GameGrain.TimeoutCheckReminderName, GameGrain.TimeoutPeriod, GameGrain.TimeoutPeriod));
         }

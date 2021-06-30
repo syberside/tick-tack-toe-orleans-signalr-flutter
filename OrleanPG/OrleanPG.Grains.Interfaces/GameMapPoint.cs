@@ -4,6 +4,8 @@ namespace OrleanPG.Grains.Interfaces
 {
     public record GameMapPoint
     {
+        public const int GameSize = 3;
+        public const int MaxIndex = GameSize - 1;
         public int X { get; }
 
         public int Y { get; }
@@ -19,9 +21,9 @@ namespace OrleanPG.Grains.Interfaces
 
         private static void ThrowIfOutOfGameMap(int x, string prefix)
         {
-            if (x < 0 || x > GameMap.MaxIndex)
+            if (x < 0 || x > MaxIndex)
             {
-                throw new ArgumentOutOfRangeException($"{prefix} should be positive and not greater than {GameMap.MaxIndex}. Received: {x}");
+                throw new ArgumentOutOfRangeException($"{prefix} should be positive and not greater than {MaxIndex}. Received: {x}");
             }
         }
     }

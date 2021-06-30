@@ -9,9 +9,9 @@ namespace OrleanPG.Grains.Interfaces.UnitTests
     {
         [Theory]
         [InlineData(-1, 0)]
-        [InlineData(GameMap.MaxIndex + 1, 0)]
+        [InlineData(GameMapPoint.MaxIndex + 1, 0)]
         [InlineData(0, -1)]
-        [InlineData(0, GameMap.MaxIndex + 1)]
+        [InlineData(0, GameMapPoint.MaxIndex + 1)]
         public void Ctor_OnIndexOutOfRange_Throws(int x, int y)
         {
             Action act = () => new GameMapPoint(x, y);

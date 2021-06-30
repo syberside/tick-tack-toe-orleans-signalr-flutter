@@ -15,9 +15,12 @@ namespace OrleanPG.Grains.Game.Engine
         {
             switch (participaton)
             {
-                case PlayerParticipation.X: return CellStatus.X;
-                case PlayerParticipation.O: return CellStatus.O;
-                default: throw new NotSupportedException();
+                case PlayerParticipation.X:
+                    return CellStatus.X;
+                case PlayerParticipation.O:
+                    return CellStatus.O;
+                default:
+                    throw new NotSupportedException();
             }
         }
 
@@ -25,9 +28,12 @@ namespace OrleanPG.Grains.Game.Engine
         {
             switch (status)
             {
-                case GameStatus.XTurn: return (PlayerParticipation.X, CellStatus.X);
-                case GameStatus.OTurn: return (PlayerParticipation.O, CellStatus.O);
-                default: throw new NotSupportedException();
+                case GameStatus.XTurn:
+                    return (PlayerParticipation.X, CellStatus.X);
+                case GameStatus.OTurn:
+                    return (PlayerParticipation.O, CellStatus.O);
+                default:
+                    throw new NotSupportedException();
             }
         }
     }

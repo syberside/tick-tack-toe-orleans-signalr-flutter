@@ -33,15 +33,14 @@ namespace OrleanPG.Grains.Interfaces
             }
         }
 
-        private static GameStatus[] _values = new[]
+        private static readonly GameStatus[] _values = new[]
         {
             GameStatus.XTurn, GameStatus.XWin,
             GameStatus.OTurn, GameStatus.OWin,
             GameStatus.Draw, GameStatus.TimedOut,
         };
 
-        public static IReadOnlyCollection<GameStatus> Values() => Array.AsReadOnly(_values);
-
-        public static GameStatus AnyExceptThis(this GameStatus @this) => Values().First(x => x != @this);
+        public static IReadOnlyCollection<GameStatus> Values { get; } = Array.AsReadOnly(_values);
+        public static GameStatus AnyExceptThis(this GameStatus @this) => Values.First(x => x != @this);
     }
 }

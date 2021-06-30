@@ -1,4 +1,5 @@
-﻿using OrleanPG.Grains.Interfaces;
+﻿
+using OrleanPG.Grains.Interfaces;
 
 namespace OrleanPG.Grains.Game
 {

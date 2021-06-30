@@ -129,9 +129,9 @@ namespace OrleanPG.Grains.Interfaces.UnitTests
             data[new GameMapPoint(1, 1)].Should().Be(CellStatus.X);
             using (new AssertionScope())
             {
-                for (var i = 0; i < GameMap.GameSize; i++)
+                for (var i = 0; i < GameMapPoint.GameSize; i++)
                 {
-                    for (var j = 0; j < GameMap.GameSize; j++)
+                    for (var j = 0; j < GameMapPoint.GameSize; j++)
                     {
                         if (i == 1 && j == 1)
                         {

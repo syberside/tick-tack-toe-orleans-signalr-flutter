@@ -19,8 +19,6 @@ namespace OrleanPG.Grains.Interfaces
             GameAxis.MainDiagonal, GameAxis.SideDiagonal,
         };
 
-        private static readonly IReadOnlyCollection<GameAxis> _asRo = Array.AsReadOnly(_values);
-
-        public static IEnumerable<GameAxis> Values => _asRo;
+        public static IEnumerable<GameAxis> Values { get; } = Array.AsReadOnly(_values);
     }
 }

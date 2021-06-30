@@ -7,9 +7,6 @@ namespace OrleanPG.Grains.Interfaces
 {
     public class GameMap
     {
-        public const int GameSize = 3;
-        public const int MaxIndex = GameSize - 1;
-
         // TODO: Could be broken via direct access as array. Need to create separate DTO for transfering
         public CellStatus[,] Data { get; init; }
 
@@ -33,7 +30,7 @@ namespace OrleanPG.Grains.Interfaces
             { cellStatus, cellStatus, cellStatus, },
         });
 
-        public GameMap() : this(new CellStatus[GameSize, GameSize]) { }
+        public GameMap() : this(new CellStatus[GameMapPoint.GameSize, GameMapPoint.GameSize]) { }
 
         public GameMap Clone() => new((CellStatus[,])Data.Clone());
 
@@ -82,9 +79,9 @@ namespace OrleanPG.Grains.Interfaces
 
         private IEnumerable<GameMapPoint> EnumerateAvailableCells()
         {
-            for (var x = 0; x < GameSize; x++)
+            for (var x = 0; x < GameMapPoint.GameSize; x++)
             {
-                for (var y = 0; y < GameSize; y++)
+                for (var y = 0; y < GameMapPoint.GameSize; y++)
                 {
                     if (this[x, y] == CellStatus.Empty)
                     {
@@ -100,13 +97,13 @@ namespace OrleanPG.Grains.Interfaces
 
         public bool IsColFilledBy(int y, CellStatus stepBy)
         {
-            for (var i = 0; i < GameSize; i++)
+            for (var i = 0; i < GameMapPoint.GameSize; i++)
             {
                 if (this[i, y] != stepBy)
                 {
                     return false;
                 }
-                if (i == MaxIndex)
+                if (i == GameMapPoint.MaxIndex)
                 {
                     return true;
                 }
@@ -116,13 +113,13 @@ namespace OrleanPG.Grains.Interfaces
 
         public bool IsRowFilledBy(int x, CellStatus stepBy)
         {
-            for (var i = 0; i < GameSize; i++)
+            for (var i = 0; i < GameMapPoint.GameSize; i++)
             {
                 if (this[x, i] != stepBy)
                 {
                     return false;
                 }
-                if (i == MaxIndex)
+                if (i == GameMapPoint.MaxIndex)
                 {
                     return true;
                 }
@@ -132,13 +129,13 @@ namespace OrleanPG.Grains.Interfaces
 
         public bool IsMainDiagonalFilledBy(CellStatus stepBy)
         {
-            for (var i = 0; i < GameSize; i++)
+            for (var i = 0; i < GameMapPoint.GameSize; i++)
             {
                 if (this[i, i] != stepBy)
                 {
                     return false;
                 }
-                if (i == MaxIndex)
+                if (i == GameMapPoint.MaxIndex)
                 {
                     return true;
                 }
@@ -148,13 +145,13 @@ namespace OrleanPG.Grains.Interfaces
 
         public bool IsSideDiagonalFilledBy(CellStatus stepBy)
         {
-            for (var i = 0; i < GameSize; i++)
+            for (var i = 0; i < GameMapPoint.GameSize; i++)
             {
-                if (this[MaxIndex - i, i] != stepBy)
+                if (this[GameMapPoint.MaxIndex - i, i] != stepBy)
                 {
                     return false;
                 }
-                if (i == MaxIndex)
+                if (i == GameMapPoint.MaxIndex)
                 {
                     return true;
                 }

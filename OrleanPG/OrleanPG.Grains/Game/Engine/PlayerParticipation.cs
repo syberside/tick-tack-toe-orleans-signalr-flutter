@@ -21,12 +21,12 @@ namespace OrleanPG.Grains.Game.Engine
             }
         }
 
-        public static (PlayerParticipation, CellStatus marker) PlayerForState(GameState status)
+        public static (PlayerParticipation, CellStatus marker) PlayerForState(GameStatus status)
         {
             switch (status)
             {
-                case GameState.XTurn: return (PlayerParticipation.X, CellStatus.X);
-                case GameState.OTurn: return (PlayerParticipation.O, CellStatus.O);
+                case GameStatus.XTurn: return (PlayerParticipation.X, CellStatus.X);
+                case GameStatus.OTurn: return (PlayerParticipation.O, CellStatus.O);
                 default: throw new NotSupportedException();
             }
         }

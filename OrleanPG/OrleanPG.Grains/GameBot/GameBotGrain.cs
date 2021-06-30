@@ -49,8 +49,8 @@ namespace OrleanPG.Grains.GameBot
                 await CleanupAsync();
             }
 
-            var takeStepForO = update.Status == GameState.OTurn && !_botData.State.PlayForX;
-            var takeStepForX = update.Status == GameState.XTurn && _botData.State.PlayForX;
+            var takeStepForO = update.Status == GameStatus.OTurn && !_botData.State.PlayForX;
+            var takeStepForX = update.Status == GameStatus.XTurn && _botData.State.PlayForX;
             var takeStep = takeStepForO || takeStepForX;
             if (!takeStep)
             {

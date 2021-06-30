@@ -7,7 +7,6 @@ using OrleanPG.Grains.Game.Engine.Actions;
 using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
-using OrleanPG.Grains.UnitTests.Helpers;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -19,7 +18,7 @@ namespace OrleanPG.Grains.UnitTests
 {
     public class GameGrainUnitTests
     {
-        private readonly Mock<IPersistentState<GameStorageData>> _storeMock;
+        private readonly Mock<IPersistentState<GameState>> _storeMock;
         private readonly Mock<GameGrain> _mockedGame;
         private readonly Mock<IGrainIdProvider> _idProviderMock;
         private readonly Mock<IGameEngine> _gameEngineMock;
@@ -28,7 +27,7 @@ namespace OrleanPG.Grains.UnitTests
 
         public GameGrainUnitTests()
         {
-            _storeMock = PersistanceHelper.CreateAndSetupStateWriteMock<GameStorageData>();
+            _storeMock = PersistanceHelper.CreateAndSetupStateWriteMock<GameState>();
             _idProviderMock = new();
             _gameEngineMock = new();
             _mockedGame = new(() => new GameGrain(_storeMock.Object, _idProviderMock.Object, _gameEngineMock.Object));
@@ -49,7 +48,7 @@ namespace OrleanPG.Grains.UnitTests
 
             await _game.StartAsync(tokenX, tokenO);
 
-            _storeMock.Object.State.Should().Be(new GameStorageData(tokenX, tokenO, GameState.XTurn, new GameMap()));
+            _storeMock.Object.State.Should().Be(new GameState(tokenX, tokenO, GameStatus.XTurn, new GameMap()));
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
         }
 
@@ -123,9 +122,9 @@ namespace OrleanPG.Grains.UnitTests
 
         #region
         [Theory, AutoData]
-        public async Task TurnAsync_OnNotInitialized_Throws(int x, int y, AuthorizationToken token)
+        public async Task TurnAsync_OnNotInitialized_Throws(RandomValidXY position, AuthorizationToken token)
         {
-            Func<Task> act = async () => await _game.TurnAsync(x, y, token);
+            Func<Task> act = async () => await _game.TurnAsync(position.X, position.Y, token);
             await act.Should().ThrowAsync<InvalidOperationException>();
         }
 
@@ -134,49 +133,35 @@ namespace OrleanPG.Grains.UnitTests
         /// </summary>
         [Theory, AutoData]
         public async Task TurnAsync_OnStateChangedByEngine_StoresChangesAndReturnNewStateAndNotifyObservers(
-            AuthorizationToken tokenX, AuthorizationToken tokenO, string xName, string oName,
-            int x, int y, GameEngineState engineState, Guid grainId)
+            GameState state, string xName, string oName, RandomValidXY position, Guid grainId)
         {
+            _storeMock.Object.State = state;
             var streamMock = SetupStreamMock(grainId);
-            (x, y) = GameMapTestHelper.AdjustToGameSize(x, y);
-            SetupStoreMockByEngineState(tokenX, tokenO, engineState);
-            SetupAuthorizationTokens(tokenX, tokenO, xName, oName);
-            var updatedEngineState = engineState with { GameState = engineState.GameState.AnyExceptThis() };
+            SetupAuthorizationTokens(state, xName, oName);
+            var updatedEngineState = state with { Status = state.Status.AnyExceptThis() };
             _gameEngineMock
-                .Setup(g => g.Process(new UserTurnAction(x, y, PlayerParticipation.X), engineState))
+                .Setup(g => g.Process(new UserTurnAction(position.X, position.Y, PlayerParticipation.X), state))
                 .Returns(updatedEngineState);
 
-            var result = await _game.TurnAsync(x, y, tokenX);
+            var result = await _game.TurnAsync(position.X, position.Y, state.XPlayer!);
 
-            var expectedResult = new GameStatusDto(updatedEngineState.GameState, updatedEngineState.Map, xName, oName);
+            var expectedResult = new GameStatusDto(updatedEngineState.Status, updatedEngineState.Map, xName, oName);
             result.Should().BeEquivalentTo(expectedResult);
-            var expectedStorageState = new GameStorageData(tokenX, tokenO, updatedEngineState.GameState, updatedEngineState.Map);
-            _storeMock.Object.State.Should().Be(expectedStorageState);
+            _storeMock.Object.State.Should().Be(updatedEngineState);
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
             streamMock.Verify(x => x.OnNextAsync(expectedResult, null), Times.Once);
-        }
-
-        private void SetupStoreMockByEngineState(AuthorizationToken tokenX, AuthorizationToken tokenO, GameEngineState engineState)
-        {
-            _storeMock.Object.State = _storeMock.Object.State with
-            {
-                XPlayer = tokenX,
-                OPlayer = tokenO,
-                Map = engineState.Map,
-                Status = engineState.GameState,
-            };
         }
 
         [Theory, AutoData]
         public async Task TurnAsync_OnXTurn_ResetsTimeoutReminder(
             AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
+            var state = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameStatus.OTurn };
+            _storeMock.Object.State = state;
             SetupAuthorizationTokens(tokenX, tokenO);
-            var engineState = new GameEngineState(_storeMock.Object.State.Map, _storeMock.Object.State.Status);
             _gameEngineMock
-                .Setup(g => g.Process(new UserTurnAction(0, 0, PlayerParticipation.X), engineState))
-                .Returns(engineState);
+                .Setup(g => g.Process(new UserTurnAction(0, 0, PlayerParticipation.X), state))
+                .Returns(state);
 
             await _game.TurnAsync(0, 0, tokenX);
 
@@ -184,15 +169,14 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task TurnAsync_OnYTurn_ResetsTimeoutReminder(
-            AuthorizationToken tokenX, AuthorizationToken tokenO)
+        public async Task TurnAsync_OnYTurn_ResetsTimeoutReminder(AuthorizationToken tokenX, AuthorizationToken tokenO)
         {
-            _storeMock.Object.State = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameState.OTurn };
+            var state = _storeMock.Object.State with { XPlayer = tokenX, OPlayer = tokenO, Status = GameStatus.OTurn };
+            _storeMock.Object.State = state;
             SetupAuthorizationTokens(tokenX, tokenO);
-            var engineState = new GameEngineState(_storeMock.Object.State.Map, _storeMock.Object.State.Status);
             _gameEngineMock
-                .Setup(g => g.Process(new UserTurnAction(0, 0, PlayerParticipation.O), engineState))
-                .Returns(engineState);
+                .Setup(g => g.Process(new UserTurnAction(0, 0, PlayerParticipation.O), state))
+                .Returns(state);
 
             await _game.TurnAsync(0, 0, tokenO);
 
@@ -205,7 +189,7 @@ namespace OrleanPG.Grains.UnitTests
         /// </summary>
         [Theory, AutoData]
         public async Task ReceiveReminder_OnStateChangedByEngine_StoresChangesAndNotifyObserversAndUnregisterReminder(
-            GameStorageData storageData, Guid grainId, string xName, string oName)
+            GameState storageData, Guid grainId, string xName, string oName)
         {
             SetupAuthorizationTokens(storageData.XPlayer, storageData.OPlayer, xName, oName);
             var streamMock = SetupStreamMock(grainId);
@@ -213,16 +197,15 @@ namespace OrleanPG.Grains.UnitTests
             _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             var _game = _mockedGame.Object;
             _storeMock.Object.State = storageData;
-            var gameEngineState = new GameEngineState(storageData.Map, storageData.Status);
-            var updatedEngineState = gameEngineState with { GameState = gameEngineState.GameState.AnyExceptThis() };
-            _gameEngineMock.Setup(x => x.Process(TimeOutAction.Instance, gameEngineState))
+            var updatedEngineState = storageData with { Status = storageData.Status.AnyExceptThis() };
+            _gameEngineMock.Setup(x => x.Process(TimeOutAction.Instance, storageData))
                 .Returns(updatedEngineState);
 
             await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
-            _storeMock.Object.State.Should().Be(storageData with { Status = updatedEngineState.GameState });
-            var expectedResult = new GameStatusDto(updatedEngineState.GameState, updatedEngineState.Map, xName, oName);
+            _storeMock.Object.State.Should().Be(storageData with { Status = updatedEngineState.Status });
+            var expectedResult = new GameStatusDto(updatedEngineState.Status, updatedEngineState.Map, xName, oName);
             streamMock.Verify(x => x.OnNextAsync(expectedResult, null), Times.Once);
             _mockedGame.Verify(x => x.UnregisterReminder(reminderMock.Object), Times.Once);
         }
@@ -236,6 +219,10 @@ namespace OrleanPG.Grains.UnitTests
             lobbyMock.Setup(x => x.ResolveUserNamesAsync(tokens)).ReturnsAsync(userNames);
             grainFactoryMock.Setup(x => x.GetGrain<IGameLobby>(Guid.Empty, It.IsAny<string>())).Returns(lobbyMock.Object);
         }
+
+        private void SetupAuthorizationTokens(GameState data, string? nameX = null, string? nameO = null)
+            => SetupAuthorizationTokens(new AuthorizationToken?[] { data.XPlayer, data.OPlayer }, new string?[] { nameX, nameO });
+
         private void SetupAuthorizationTokens(AuthorizationToken? tokenX = null, AuthorizationToken? tokenO = null, string? nameX = null, string? nameO = null)
             => SetupAuthorizationTokens(new AuthorizationToken?[] { tokenX, tokenO }, new string?[] { nameX, nameO });
 

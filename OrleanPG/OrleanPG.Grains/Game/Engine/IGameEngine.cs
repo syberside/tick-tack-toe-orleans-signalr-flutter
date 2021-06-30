@@ -4,6 +4,6 @@ namespace OrleanPG.Grains.Game.Engine
 {
     public interface IGameEngine
     {
-        GameEngineState Process<TAction>(TAction action, GameEngineState state) where TAction : IGameAction;
+        GameState Process<TAction>(TAction action, GameState state) where TAction : IGameAction;
     }
 }

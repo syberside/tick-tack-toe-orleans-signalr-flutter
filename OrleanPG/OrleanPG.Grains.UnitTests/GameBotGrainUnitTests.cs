@@ -60,10 +60,10 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory]
-        [InlineAutoData(GameState.TimedOut)]
-        [InlineAutoData(GameState.XWin)]
-        [InlineAutoData(GameState.OWin)]
-        public async Task OnUpdateReceived_GameInEndStep_Cleanup(GameState gameState, GameStatusDto update, GameBotStorageData botState)
+        [InlineAutoData(GameStatus.TimedOut)]
+        [InlineAutoData(GameStatus.XWin)]
+        [InlineAutoData(GameStatus.OWin)]
+        public async Task OnUpdateReceived_GameInEndStep_Cleanup(GameStatus gameState, GameStatusDto update, GameBotStorageData botState)
         {
             _storageMock.Object.State = botState;
             update = update with { Status = gameState };
@@ -76,9 +76,9 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory]
-        [InlineAutoData(GameState.OTurn, false)]
-        [InlineAutoData(GameState.XTurn, true)]
-        public async Task OnUpdateReceived_BotTurn_PerformStep(GameState gameState, bool playForX, GameStatusDto update, GameBotStorageData botState, Guid gameId)
+        [InlineAutoData(GameStatus.OTurn, false)]
+        [InlineAutoData(GameStatus.XTurn, true)]
+        public async Task OnUpdateReceived_BotTurn_PerformStep(GameStatus gameState, bool playForX, GameStatusDto update, GameBotStorageData botState, Guid gameId)
         {
             _idProviderMock.Setup(x => x.GetGrainId(_gameBot)).Returns(gameId);
             _storageMock.Object.State = botState with { PlayForX = playForX };

@@ -16,7 +16,7 @@ namespace OrleanPG.Grains.Game.Engine
             _winCheckers = winCheckers.ToArray();
         }
 
-        public GameEngineState Process<TAction>(TAction action, GameEngineState state) where TAction : IGameAction
+        public GameState Process<TAction>(TAction action, GameState state) where TAction : IGameAction
         {
             return Process(action as dynamic, state);
         }
@@ -24,11 +24,11 @@ namespace OrleanPG.Grains.Game.Engine
         /// <summary>
         /// NOTE: Default callback for multuple dispatch
         /// </summary>
-        private GameEngineState Process(IGameAction action, GameEngineState _)
+        private GameState Process(IGameAction action, GameState _)
             => throw new NotSupportedException($"Action {action?.GetType()} is not supported");
 
 
-        private GameEngineState Process(UserTurnAction action, GameEngineState state)
+        private GameState Process(UserTurnAction action, GameState state)
         {
             var x = action.X;
             var y = action.Y;
@@ -38,7 +38,7 @@ namespace OrleanPG.Grains.Game.Engine
                 throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(map[x, y] == CellStatus.X ? "X" : "O")}");
             }
 
-            var gameState = state.GameState;
+            var gameState = state.Status;
             if (gameState.IsEndStatus())
             {
                 throw new InvalidOperationException($"Game is in end status: {gameState}");
@@ -52,16 +52,16 @@ namespace OrleanPG.Grains.Game.Engine
             var updatedMap = UpdateMap(x, y, map, stepMarker);
             var status = GetNewStatus(action.StepBy, updatedMap);
 
-            return new GameEngineState(updatedMap, status);
+            return state with { Status = status, Map = updatedMap };
         }
 
-        private GameEngineState Process(TimeOutAction _, GameEngineState engineState)
+        private GameState Process(TimeOutAction _, GameState engineState)
         {
-            if (engineState.GameState.IsEndStatus())
+            if (engineState.Status.IsEndStatus())
             {
                 return engineState;
             }
-            return engineState with { GameState = GameState.TimedOut };
+            return engineState with { Status = GameStatus.TimedOut };
         }
 
         private static GameMap UpdateMap(int x, int y, GameMap map, CellStatus stepMarker)
@@ -71,11 +71,11 @@ namespace OrleanPG.Grains.Game.Engine
             return updatedMap;
         }
 
-        private GameState GetNewStatus(PlayerParticipation stepBy, GameMap map)
+        private GameStatus GetNewStatus(PlayerParticipation stepBy, GameMap map)
         {
             if (!map.HaveEmptyCells)
             {
-                return GameState.Draw;
+                return GameStatus.Draw;
             }
             var win = _winCheckers
               .Select(x => x.CheckIfWin(map, stepBy))
@@ -91,10 +91,10 @@ namespace OrleanPG.Grains.Game.Engine
                 return StepToWinState(stepBy);
             }
         }
-        private static GameState StepToNewStep(PlayerParticipation p)
-            => p == PlayerParticipation.X ? GameState.OTurn : GameState.XTurn;
+        private static GameStatus StepToNewStep(PlayerParticipation p)
+            => p == PlayerParticipation.X ? GameStatus.OTurn : GameStatus.XTurn;
 
-        private static GameState StepToWinState(PlayerParticipation p)
-            => p == PlayerParticipation.X ? GameState.XWin : GameState.OWin;
+        private static GameStatus StepToWinState(PlayerParticipation p)
+            => p == PlayerParticipation.X ? GameStatus.XWin : GameStatus.OWin;
     }
 }

@@ -12,7 +12,7 @@ namespace OrleanPG.Grains.Game
 {
     public class GameGrain : Grain, IGame, IGameInitializer
     {
-        private readonly IPersistentState<GameStorageData> _gameState;
+        private readonly IPersistentState<GameState> _gameState;
         private readonly IGrainIdProvider _grainIdProvider;
         private readonly IGameEngine _gameEngine;
 
@@ -21,7 +21,7 @@ namespace OrleanPG.Grains.Game
 
         public GameGrain(
             [PersistentState("game_game_state", "game_state_store")]
-            IPersistentState<GameStorageData> gameState,
+            IPersistentState<GameState> gameState,
             IGrainIdProvider grainIdProvider,
             IGameEngine gameEngine)
         {
@@ -30,20 +30,22 @@ namespace OrleanPG.Grains.Game
             _gameEngine = gameEngine;
         }
 
-        private async Task UpdateState(GameStorageData data)
+        private GameState State => _gameState.State;
+
+        private async Task UpdateState(GameState data)
         {
             _gameState.State = data;
             await _gameState.WriteStateAsync();
             await NotifyObservers();
         }
 
-        private async Task UpdateStateIfChanged(GameEngineState oldState, GameEngineState newState)
+        private async Task UpdateStateIfChanged(GameState oldState, GameState newState)
         {
             if (oldState == newState)
             {
                 return;
             }
-            await UpdateState(_gameState.State with { Map = newState.Map, Status = newState.GameState });
+            await UpdateState(newState);
         }
 
         private async Task NotifyObservers()
@@ -69,11 +71,11 @@ namespace OrleanPG.Grains.Game
             {
                 throw new ArgumentException();
             }
-            if (_gameState.State.IsInitialized)
+            if (State.IsInitialized)
             {
                 throw new InvalidOperationException();
             }
-            await UpdateState(_gameState.State with { XPlayer = playerX, OPlayer = playerO });
+            await UpdateState(State with { XPlayer = playerX, OPlayer = playerO });
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
 
             var result = await GetGameStatusDtoFromGameState();
@@ -83,12 +85,12 @@ namespace OrleanPG.Grains.Game
 
         public async Task<GameStatusDto> TurnAsync(int x, int y, AuthorizationToken player)
         {
-            if (!_gameState.State.IsInitialized)
+            if (!State.IsInitialized)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Game is not initialized yet");
             }
 
-            var engineState = BuildEngineState();
+            var engineState = State;
             var turn = new UserTurnAction(x, y, GetParticipation(player));
             var newState = _gameEngine.Process(turn, engineState);
 
@@ -99,15 +101,13 @@ namespace OrleanPG.Grains.Game
             return await GetGameStatusDtoFromGameState();
         }
 
-        private GameEngineState BuildEngineState() => new(_gameState.State.Map, _gameState.State.Status);
-
         private PlayerParticipation GetParticipation(AuthorizationToken player)
         {
-            if (player == _gameState.State.XPlayer)
+            if (player == State.XPlayer)
             {
                 return PlayerParticipation.X;
             }
-            if (player == _gameState.State.OPlayer)
+            if (player == State.OPlayer)
             {
                 return PlayerParticipation.O;
             }
@@ -128,7 +128,7 @@ namespace OrleanPG.Grains.Game
 
         private async Task CheckTimeout()
         {
-            var engineState = BuildEngineState();
+            var engineState = State;
             var newState = _gameEngine.Process(TimeOutAction.Instance, engineState);
 
             await UpdateStateIfChanged(engineState, newState);
@@ -166,8 +166,8 @@ namespace OrleanPG.Grains.Game
         private async Task<GameStatusDto> GetGameStatusDtoFromGameState()
         {
             var lobby = GrainFactory.GetGrain<IGameLobby>(Guid.Empty);
-            var userNames = await lobby.ResolveUserNamesAsync(_gameState.State.XPlayer, _gameState.State.OPlayer);
-            return new GameStatusDto(_gameState.State.Status, _gameState.State.Map, userNames[0], userNames[1]);
+            var userNames = await lobby.ResolveUserNamesAsync(State.XPlayer, State.OPlayer);
+            return new GameStatusDto(State.Status, State.Map, userNames[0], userNames[1]);
         }
     }
 }

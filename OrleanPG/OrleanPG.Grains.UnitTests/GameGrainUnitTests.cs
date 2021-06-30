@@ -121,13 +121,6 @@ namespace OrleanPG.Grains.UnitTests
         #endregion
 
         #region
-        [Theory, AutoData]
-        public async Task TurnAsync_OnNotInitialized_Throws(RandomizableMapPoint position, AuthorizationToken token)
-        {
-            Func<Task> act = async () => await _game.TurnAsync(position, token);
-            await act.Should().ThrowAsync<InvalidOperationException>();
-        }
-
         /// <summary>
         /// TODO: Test to big, split to three parts OR add state change notifier as separate entity
         /// </summary>

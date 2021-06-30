@@ -69,14 +69,13 @@ namespace OrleanPG.Grains.UnitTests.Engine
         #region
         [Theory]
         [AutoData]
-        public void Process_UserTurnAction_OnCellAlreadyInUse_Throws(
-            RandomizableMapPoint position, PlayerParticipation participation, GameState state)
+        public void Process_UserTurnAction_OnCellAlreadyInUse_Throws(RandomizableUserTurnAction action, GameState state)
         {
-            state = state with { Map = state.Map.Update(position, CellStatus.X) };
+            state = state with { Map = state.Map.Update(action.Position, CellStatus.X) };
 
-            Action action = () => _gameEngine.Process(new UserTurnAction(position, participation), state);
+            Action act = () => _gameEngine.Process(action, state);
 
-            action.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<InvalidOperationException>();
         }
 
         [Theory]
@@ -84,20 +83,18 @@ namespace OrleanPG.Grains.UnitTests.Engine
         [InlineAutoData(PlayerParticipation.O, CellStatus.O, GameStatus.OTurn, GameStatus.XTurn)]
         public void Process_UserTurnAction_OnFreeCell_ReturnsNextTurnState(
             PlayerParticipation participation, CellStatus cellStatus, GameStatus status,
-            GameStatus expectedState,
-            RandomizableMapPoint position, GameState state)
+            GameStatus expectedState, RandomizableMapPoint position, GameState state)
         {
             state = state with
             {
                 Status = status,
                 Map = state.Map.Update(position, CellStatus.Empty)
             };
-
             var action = new UserTurnAction(position, participation);
 
             var result = _gameEngine.Process(action, state);
 
-            var expectedMap = state.Map.Update(position, cellStatus);
+            var expectedMap = state.Map.Update(action.Position, cellStatus);
             var expectedResult = state with { Status = expectedState, Map = expectedMap };
             result.Should().BeEquivalentTo(expectedResult);
         }
@@ -108,18 +105,46 @@ namespace OrleanPG.Grains.UnitTests.Engine
         [InlineAutoData(CellStatus.O, GameStatus.OTurn, PlayerParticipation.O)]
         public void Process_UserTurnAction_OnLastCell_ReturnsDrawState(
             CellStatus cellStatus, GameStatus status, PlayerParticipation participation,
-            RandomizableMapPoint position)
+            GameState state, RandomizableMapPoint position)
         {
             var map = GameMap.FilledWith(cellStatus).Update(position, CellStatus.Empty);
-            var state = new GameState(null, null, status, map);
+            state = state with { Status = status, Map = map };
             var action = new UserTurnAction(position, participation);
 
             var result = _gameEngine.Process(action, state);
 
             var expectedMap = GameMap.FilledWith(cellStatus);
-            var expectedResult = new GameState(null, null, GameStatus.Draw, expectedMap);
+            var expectedResult = state with { Map = expectedMap, Status = GameStatus.Draw };
             result.Should().BeEquivalentTo(expectedResult);
         }
+
+        [Theory, AutoData]
+        public void Process_UserTurnAction_OnNotInitializedByX_Throws(RandomizableUserTurnAction action, GameState state)
+        {
+            state = state with { XPlayer = null };
+
+            Action act = () => _gameEngine.Process(action, state);
+
+            act.Should().Throw<InvalidOperationException>();
+        }
+
+        [Theory, AutoData]
+        public void Process_UserTurnAction_OnNotInitializedByO_Throws(RandomizableUserTurnAction action, GameState state)
+        {
+            state = state with { OPlayer = null };
+
+            Action act = () => _gameEngine.Process(action, state);
+
+            act.Should().Throw<InvalidOperationException>();
+        }
         #endregion
+    }
+
+    public record RandomizableUserTurnAction : UserTurnAction
+    {
+        public RandomizableUserTurnAction(RandomizableMapPoint position, PlayerParticipation participation)
+            : base(position, participation)
+        {
+        }
     }
 }

@@ -18,18 +18,22 @@ namespace OrleanPG.Grains.Game.Engine
 
         public GameState Process<TAction>(TAction action, GameState state) where TAction : IGameAction
         {
-            return Process(action as dynamic, state);
+            return ProcessMultipleDispatch(action as dynamic, state);
         }
 
         /// <summary>
         /// NOTE: Default callback for multuple dispatch
         /// </summary>
-        private GameState Process(IGameAction action, GameState _)
+        private GameState ProcessMultipleDispatch(IGameAction action, GameState _)
             => throw new NotSupportedException($"Action {action?.GetType()} is not supported");
 
 
-        private GameState Process(UserTurnAction action, GameState state)
+        private GameState ProcessMultipleDispatch(UserTurnAction action, GameState state)
         {
+            if (!state.IsInitialized)
+            {
+                throw new InvalidOperationException("Game is not initialized yet");
+            }
             var map = state.Map;
             if (map.IsCellBusy(action.Position))
             {
@@ -53,7 +57,7 @@ namespace OrleanPG.Grains.Game.Engine
             return state with { Status = status, Map = updatedMap };
         }
 
-        private GameState Process(TimeOutAction _, GameState state)
+        private GameState ProcessMultipleDispatch(TimeOutAction _, GameState state)
         {
             if (state.Status.IsEndStatus())
             {

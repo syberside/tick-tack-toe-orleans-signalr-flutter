@@ -13,6 +13,8 @@ namespace OrleanPG.Grains.Interfaces
         {
             ThrowIfOutOfGameMap(x, "X");
             ThrowIfOutOfGameMap(y, "Y");
+            X = x;
+            Y = y;
         }
 
         private static void ThrowIfOutOfGameMap(int x, string prefix)

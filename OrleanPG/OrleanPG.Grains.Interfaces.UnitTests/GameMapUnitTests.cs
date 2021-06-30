@@ -52,9 +52,9 @@ namespace OrleanPG.Grains.Interfaces.UnitTests
                 { CellStatus.Empty, CellStatus.O, CellStatus.X, },
             });
             var result = data.GetAvailableCells();
-            result.Should().BeEquivalentTo(new (int, int)[]
+            result.Should().BeEquivalentTo(new[]
             {
-                (0,0), (1,1), (1,2), (2,0),
+                new GameMapPoint(0,0), new GameMapPoint(1,1), new GameMapPoint(1,2), new GameMapPoint(2,0),
             });
         }
 

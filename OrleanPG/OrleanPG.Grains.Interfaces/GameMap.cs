@@ -10,6 +10,7 @@ namespace OrleanPG.Grains.Interfaces
         public const int GameSize = 3;
         public const int MaxIndex = GameSize - 1;
 
+        // TODO: Could be broken via direct access as array. Need to create separate DTO for transfering
         public CellStatus[,] Data { get; init; }
 
         public bool HaveEmptyCells => EnumerateAvailableCells().Any();
@@ -18,11 +19,10 @@ namespace OrleanPG.Grains.Interfaces
             Data = data;
         }
 
-        // TODO: Make immutable and use only this. rename
-        public GameMap Updated(GameMapPoint position, CellStatus status)
+        public GameMap Update(GameMapPoint position, CellStatus status)
         {
             var result = Clone();
-            result[position] = status;
+            result[position.X, position.Y] = status;
             return result;
         }
 
@@ -37,8 +37,7 @@ namespace OrleanPG.Grains.Interfaces
 
         public GameMap Clone() => new((CellStatus[,])Data.Clone());
 
-        // TODO: replace with point
-        public CellStatus this[int x, int y]
+        private CellStatus this[int x, int y]
         {
             get => Data[x, y];
             set => Data[x, y] = value;
@@ -46,8 +45,7 @@ namespace OrleanPG.Grains.Interfaces
 
         public CellStatus this[GameMapPoint position]
         {
-            get => this[position.X, position.Y];
-            set => this[position.X, position.Y] = value;
+            get => Data[position.X, position.Y];
         }
 
         public string ToMapString(string separator = " | ", string emptyValue = " ", string xValue = "X", string oValue = "O")

@@ -125,8 +125,8 @@ namespace OrleanPG.Grains.Interfaces.UnitTests
                 { CellStatus.Empty, CellStatus.Empty, CellStatus.Empty, },
                 { CellStatus.Empty, CellStatus.Empty, CellStatus.Empty, },
             });
-            data[1, 1] = CellStatus.X;
-            data[1, 1].Should().Be(CellStatus.X);
+            data = data.Update(new GameMapPoint(1, 1), CellStatus.X);
+            data[new GameMapPoint(1, 1)].Should().Be(CellStatus.X);
             using (new AssertionScope())
             {
                 for (var i = 0; i < GameMap.GameSize; i++)
@@ -137,7 +137,7 @@ namespace OrleanPG.Grains.Interfaces.UnitTests
                         {
                             continue;
                         }
-                        data[i, j].Should().Be(CellStatus.Empty);
+                        data[new GameMapPoint(i, j)].Should().Be(CellStatus.Empty);
                     }
                 }
             }

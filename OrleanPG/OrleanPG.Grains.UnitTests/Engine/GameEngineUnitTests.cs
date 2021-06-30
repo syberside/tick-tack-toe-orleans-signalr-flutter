@@ -72,7 +72,7 @@ namespace OrleanPG.Grains.UnitTests.Engine
         public void Process_UserTurnAction_OnCellAlreadyInUse_Throws(
             RandomizableMapPoint position, PlayerParticipation participation, GameState state)
         {
-            state.Map[position.X, position.Y] = CellStatus.X;
+            state = state with { Map = state.Map.Update(position, CellStatus.X) };
 
             Action action = () => _gameEngine.Process(new UserTurnAction(position, participation), state);
 
@@ -87,14 +87,17 @@ namespace OrleanPG.Grains.UnitTests.Engine
             GameStatus expectedState,
             RandomizableMapPoint position, GameState state)
         {
-            state = state with { Status = status };
-            state.Map[position.X, position.Y] = CellStatus.Empty;
+            state = state with
+            {
+                Status = status,
+                Map = state.Map.Update(position, CellStatus.Empty)
+            };
+
             var action = new UserTurnAction(position, participation);
 
             var result = _gameEngine.Process(action, state);
 
-            var expectedMap = state.Map.Clone();
-            expectedMap[position.X, position.Y] = cellStatus;
+            var expectedMap = state.Map.Update(position, cellStatus);
             var expectedResult = state with { Status = expectedState, Map = expectedMap };
             result.Should().BeEquivalentTo(expectedResult);
         }
@@ -107,8 +110,7 @@ namespace OrleanPG.Grains.UnitTests.Engine
             CellStatus cellStatus, GameStatus status, PlayerParticipation participation,
             RandomizableMapPoint position)
         {
-            var map = GameMap.FilledWith(cellStatus);
-            map[position.X, position.Y] = CellStatus.Empty;
+            var map = GameMap.FilledWith(cellStatus).Update(position, CellStatus.Empty);
             var state = new GameState(null, null, status, map);
             var action = new UserTurnAction(position, participation);
 

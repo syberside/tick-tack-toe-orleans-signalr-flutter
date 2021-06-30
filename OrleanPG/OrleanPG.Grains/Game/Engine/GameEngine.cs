@@ -33,9 +33,7 @@ namespace OrleanPG.Grains.Game.Engine
             var map = state.Map;
             if (map.IsCellBusy(action.Position))
             {
-                var x = action.Position.X;
-                var y = action.Position.Y;
-                throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(map[x, y] == CellStatus.X ? "X" : "O")}");
+                throw new InvalidOperationException($"Cell {action.Position} already allocated by {(map[action.Position] == CellStatus.X ? "X" : "O")}");
             }
 
             var gameState = state.Status;
@@ -49,7 +47,7 @@ namespace OrleanPG.Grains.Game.Engine
                 throw new InvalidOperationException();
             }
 
-            var updatedMap = map.Updated(action.Position, stepMarker);
+            var updatedMap = map.Update(action.Position, stepMarker);
             var status = GetNewStatus(action.StepBy, updatedMap);
 
             return state with { Status = status, Map = updatedMap };

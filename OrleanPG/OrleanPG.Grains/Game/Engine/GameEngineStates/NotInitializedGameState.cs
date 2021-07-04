@@ -5,14 +5,15 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
 {
     internal class NotInitializedGameState : IGameEngineState
     {
-        public GameState Process(UserTurnAction action)
-        {
-            throw new InvalidOperationException();
-        }
+        private readonly GameState _state;
 
-        public GameState Process(TimeOutAction action)
-        {
-            throw new InvalidOperationException();
-        }
+        public NotInitializedGameState(GameState state) => _state = state;
+
+        public GameState Process(UserTurnAction action) => throw new InvalidOperationException();
+
+        public GameState Process(TimeOutAction action) => throw new InvalidOperationException();
+
+        public GameState Process(InitializeAction action)
+            => _state with { XPlayer = action.XPlayer, OPlayer = action.OPlayer };
     }
 }

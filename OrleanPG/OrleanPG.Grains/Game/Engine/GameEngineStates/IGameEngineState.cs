@@ -6,5 +6,6 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
     {
         GameState Process(UserTurnAction action);
         GameState Process(TimeOutAction action);
+        GameState Process(InitializeAction action);
     }
 }

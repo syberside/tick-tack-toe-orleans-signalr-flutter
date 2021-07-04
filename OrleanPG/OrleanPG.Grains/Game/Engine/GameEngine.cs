@@ -20,14 +20,20 @@ namespace OrleanPG.Grains.Game.Engine
         public GameState Process<TAction>(TAction action, GameState state) where TAction : IGameAction
         {
             var engineState = GetEngineState(state);
-            return ProcessMultipleDispatch(action as dynamic, engineState);
+            return action switch
+            {
+                InitializeAction initialize => engineState.Process(initialize),
+                UserTurnAction userTurn => engineState.Process(userTurn),
+                TimeOutAction timeout => engineState.Process(timeout),
+                _ => throw new NotSupportedException($"Action {action?.GetType()} is not supported"),
+            };
         }
 
         private IGameEngineState GetEngineState(GameState state)
         {
             if (state.XPlayer == null && state.OPlayer == null)
             {
-                return new NotInitializedGameState();
+                return new NotInitializedGameState(state);
             }
             else if (state.Status.IsEndStatus())
             {
@@ -38,18 +44,5 @@ namespace OrleanPG.Grains.Game.Engine
                 return new InProgressGameState(state, _winCheckers);
             }
         }
-
-        /// <summary>
-        /// NOTE: Default callback for multuple dispatch
-        /// </summary>
-        private GameState ProcessMultipleDispatch(IGameAction action, IGameEngineState _)
-            => throw new NotSupportedException($"Action {action?.GetType()} is not supported");
-
-
-        private GameState ProcessMultipleDispatch(UserTurnAction action, IGameEngineState state)
-            => state.Process(action);
-
-        private GameState ProcessMultipleDispatch(TimeOutAction action, IGameEngineState state)
-            => state.Process(action);
     }
 }

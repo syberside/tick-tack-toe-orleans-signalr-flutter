@@ -1,4 +1,5 @@
 ﻿using OrleanPG.Grains.Interfaces;
+using System;
 
 namespace OrleanPG.Grains.Game.Engine.Actions
 {
@@ -10,7 +11,7 @@ namespace OrleanPG.Grains.Game.Engine.Actions
 
         public UserTurnAction(GameMapPoint position, PlayerParticipation participation)
         {
-            Position = position;
+            Position = position ?? throw new ArgumentNullException(nameof(position));
             StepBy = participation;
         }
     }

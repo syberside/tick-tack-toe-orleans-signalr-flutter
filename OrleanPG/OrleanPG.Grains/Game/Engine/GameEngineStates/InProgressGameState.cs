@@ -81,5 +81,7 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
 
         private static GameStatus StepToWinState(PlayerParticipation p)
             => p == PlayerParticipation.X ? GameStatus.XWin : GameStatus.OWin;
+
+        public GameState Process(InitializeAction action) => throw new InvalidOperationException();
     }
 }

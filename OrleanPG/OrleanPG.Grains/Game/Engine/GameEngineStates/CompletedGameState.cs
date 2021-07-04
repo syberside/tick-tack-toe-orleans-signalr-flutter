@@ -9,11 +9,10 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
 
         public CompletedGameState(GameState state) => _state = state;
 
-        public GameState Process(UserTurnAction action)
-        {
-            throw new InvalidOperationException();
-        }
+        public GameState Process(UserTurnAction action) => throw new InvalidOperationException();
 
         public GameState Process(TimeOutAction action) => _state;
+
+        public GameState Process(InitializeAction action) => throw new InvalidOperationException();
     }
 }

@@ -17,7 +17,7 @@ namespace OrleanPG.Grains.Game.Engine
             _winCheckers = winCheckers.ToArray();
         }
 
-        public GameState Process<TAction>(TAction action, GameState state) where TAction : IGameAction
+        public GameState Process(IGameAction action, GameState state)
         {
             var engineState = GetEngineState(state);
             return action switch

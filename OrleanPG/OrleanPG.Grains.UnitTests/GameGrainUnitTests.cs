@@ -7,6 +7,7 @@ using OrleanPG.Grains.Game.Engine.Actions;
 using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
+using OrleanPG.Grains.UnitTests.Helpers;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -16,6 +17,14 @@ using Xunit;
 
 namespace OrleanPG.Grains.UnitTests
 {
+
+    /// <summary>
+    /// TODO: Rewrite this test based on logic inside each method. 
+    /// There is 2 dimensions: 
+    ///  - 1: if updated - write and notify
+    ///  - 2: if status is end - reset timer, otherwice make sure it setup
+    ///  This could be refactored to 2-3 separate responsibilities, GameGrain could be an argument of calls
+    /// </summary>
     public class GameGrainUnitTests
     {
         private readonly Mock<IPersistentState<GameState>> _storeMock;
@@ -73,7 +82,7 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task StartAsync_Always_SetTimeoutReminder(GameState state, string nameX, string nameO)
+        public async Task StartAsync_StateChangedToNotEnd_SetTimeoutReminder(GameState state, string nameX, string nameO)
         {
             _storeMock.Object.State = state;
             SetupAuthorizationTokens(state.XPlayer, state.OPlayer, nameX, nameO);
@@ -148,7 +157,7 @@ namespace OrleanPG.Grains.UnitTests
         /// TODO: Test is too big
         /// </summary>
         [Theory, AutoData]
-        public async Task ReceiveReminder_OnStateChangedByEngine_StoresChangesAndNotifyObserversAndUnregisterReminder(
+        public async Task ReceiveReminder_OnStateChangedByEngineToEnd_StoresChangesAndNotifyObserversAndUnregisterReminder(
             GameState state, Guid grainId, string xName, string oName)
         {
             SetupAuthorizationTokens(state.XPlayer, state.OPlayer, xName, oName);
@@ -157,14 +166,14 @@ namespace OrleanPG.Grains.UnitTests
             _mockedGame.Setup(x => x.GetReminder(GameGrain.TimeoutCheckReminderName)).ReturnsAsync(reminderMock.Object);
             var _game = _mockedGame.Object;
             _storeMock.Object.State = state;
-            var updatedState = state with { Status = state.Status.AnyExceptThis() };
+            var updatedState = state with { Status = state.Status.AnyFinalExpectThis() };
             _gameEngineMock.Setup(x => x.Process(TimeOutAction.Instance, state))
                 .Returns(updatedState);
 
             await _game.ReceiveReminder(GameGrain.TimeoutCheckReminderName, new TickStatus());
 
             _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
-            _storeMock.Object.State.Should().Be(state with { Status = updatedState.Status });
+            _storeMock.Object.State.Should().BeEquivalentTo(updatedState);
             var gameMapDto = new GameMapDto(updatedState.Map.DataSnapshot());
             var expectedResult = new GameStatusDto(updatedState.Status, gameMapDto, xName, oName);
             streamMock.Verify(x => x.OnNextAsync(expectedResult, null), Times.Once);

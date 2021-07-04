@@ -41,6 +41,5 @@ namespace OrleanPG.Grains.Interfaces
         };
 
         public static IReadOnlyCollection<GameStatus> Values { get; } = Array.AsReadOnly(_values);
-        public static GameStatus AnyExceptThis(this GameStatus @this) => Values.First(x => x != @this);
     }
 }

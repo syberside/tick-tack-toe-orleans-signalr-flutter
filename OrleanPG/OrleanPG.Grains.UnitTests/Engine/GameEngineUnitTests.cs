@@ -65,7 +65,6 @@ namespace OrleanPG.Grains.UnitTests.Engine
         }
         #endregion
 
-        //TODO: tests for UserTurnAction
         #region
         [Theory]
         [AutoData]

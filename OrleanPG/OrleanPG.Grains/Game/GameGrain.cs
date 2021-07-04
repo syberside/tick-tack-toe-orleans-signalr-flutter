@@ -32,20 +32,15 @@ namespace OrleanPG.Grains.Game
 
         private GameState State => _gameState.State;
 
-        private async Task UpdateState(GameState data)
+        private async Task UpdateStateAndNotifyObserversIfChanged(GameState newState)
         {
-            _gameState.State = data;
-            await _gameState.WriteStateAsync();
-            await NotifyObservers();
-        }
-
-        private async Task UpdateStateIfChanged(GameState oldState, GameState newState)
-        {
-            if (oldState == newState)
+            if (State == newState)
             {
                 return;
             }
-            await UpdateState(newState);
+            _gameState.State = newState;
+            await _gameState.WriteStateAsync();
+            await NotifyObservers();
         }
 
         private async Task NotifyObservers()
@@ -59,27 +54,14 @@ namespace OrleanPG.Grains.Game
 
         public async Task<GameStatusDto> StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)
         {
-            if (playerX == null)
-            {
-                throw new ArgumentNullException();
-            }
-            if (playerO == null)
-            {
-                throw new ArgumentNullException();
-            }
-            if (playerO == playerX)
-            {
-                throw new ArgumentException();
-            }
-            if (State.IsInitialized)
-            {
-                throw new InvalidOperationException();
-            }
-            await UpdateState(State with { XPlayer = playerX, OPlayer = playerO });
+            var action = new InitializeAction(playerX, playerO);
+            var newState = _gameEngine.Process(action, State);
+
+            await UpdateStateAndNotifyObserversIfChanged(newState);
+
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
 
-            var result = await GetGameStatusDtoFromGameState();
-            return result;
+            return await GetGameStatusDtoFromGameState();
         }
 
 
@@ -88,7 +70,7 @@ namespace OrleanPG.Grains.Game
             var turn = new UserTurnAction(position, GetParticipation(player));
             var newState = _gameEngine.Process(turn, State);
 
-            await UpdateStateIfChanged(State, newState);
+            await UpdateStateAndNotifyObserversIfChanged(newState);
 
             await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
 
@@ -124,7 +106,7 @@ namespace OrleanPG.Grains.Game
         {
             var newState = _gameEngine.Process(TimeOutAction.Instance, State);
 
-            await UpdateStateIfChanged(State, newState);
+            await UpdateStateAndNotifyObserversIfChanged(newState);
 
             var reminder = await GetReminder(TimeoutCheckReminderName);
             await UnregisterReminder(reminder);
@@ -161,7 +143,8 @@ namespace OrleanPG.Grains.Game
             var lobby = GrainFactory.GetGrain<IGameLobby>(Guid.Empty);
             var userNames = await lobby.ResolveUserNamesAsync(State.XPlayer, State.OPlayer);
             var gameMapDto = new GameMapDto(State.Map.DataSnapshot());
-            return new GameStatusDto(State.Status, gameMapDto, userNames[0], userNames[1]);
+            var result = new GameStatusDto(State.Status, gameMapDto, userNames[0], userNames[1]);
+            return result;
         }
     }
 }

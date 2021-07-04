@@ -42,25 +42,24 @@ namespace OrleanPG.Grains.UnitTests
 
         #region StartAsync
         [Theory, AutoData]
-        public async Task StartAsync_OnNotInitialized_AssignsPlayers(AuthorizationToken tokenX, AuthorizationToken tokenO)
-        {
-            SetupAuthorizationTokens(tokenX, tokenO);
-
-            await _game.StartAsync(tokenX, tokenO);
-
-            _storeMock.Object.State.Should().Be(new GameState(tokenX, tokenO, GameStatus.XTurn, new GameMap()));
-            _storeMock.Verify(x => x.WriteStateAsync(), Times.Once);
-        }
-
-        [Theory, AutoData]
-        public async Task StartAsync_OnSuccess_NotifySubscribers(AuthorizationToken tokenX, AuthorizationToken tokenO, Guid grainId)
+        public async Task StartAsync_IfStateChanged_NotifySubscribers(GameState state, string nameX, string nameO, Guid grainId)
         {
             var streamMock = SetupStreamMock(grainId);
-            SetupAuthorizationTokens(tokenX, tokenO);
+            _storeMock.Object.State = state;
+            SetupAuthorizationTokens(state.XPlayer, state.OPlayer, nameX, nameO);
+            var updatedState = state with { Status = state.Status.AnyExceptThis() };
+            _gameEngineMock.Setup(x => x.Process(It.IsAny<InitializeAction>(), It.IsAny<GameState>())).Returns(updatedState);
 
-            await _game.StartAsync(tokenX, tokenO);
+            await _game.StartAsync(state.XPlayer!, state.OPlayer!);
 
-            streamMock.Verify(x => x.OnNextAsync(new GameStatusDto(), null), Times.Once);
+            var expectedUpdate = new GameStatusDto
+            {
+                GameMap = new GameMapDto(state.Map.DataSnapshot()),
+                PlayerOName = nameO,
+                PlayerXName = nameX,
+                Status = updatedState.Status
+            };
+            streamMock.Verify(x => x.OnNextAsync(expectedUpdate, null), Times.Once);
         }
 
         private Mock<IAsyncStream<GameStatusDto>> SetupStreamMock(Guid grainId)
@@ -74,47 +73,13 @@ namespace OrleanPG.Grains.UnitTests
         }
 
         [Theory, AutoData]
-        public async Task StartAsync_OnInitialized_Throws(AuthorizationToken tokenX, AuthorizationToken tokenO)
+        public async Task StartAsync_Always_SetTimeoutReminder(GameState state, string nameX, string nameO)
         {
-            SetupAuthorizationTokens(tokenX, tokenO);
+            _storeMock.Object.State = state;
+            SetupAuthorizationTokens(state.XPlayer, state.OPlayer, nameX, nameO);
+            _gameEngineMock.Setup(x => x.Process(It.IsAny<InitializeAction>(), It.IsAny<GameState>())).Returns(state);
 
-            await _game.StartAsync(tokenX, tokenO);
-
-            Func<Task> act = async () => await _game.StartAsync(tokenX, tokenO);
-            await act.Should().ThrowAsync<InvalidOperationException>();
-        }
-
-        [Theory, AutoData]
-        public async Task StartAsync_OnXPlayerNull_Throws(AuthorizationToken tokenO)
-        {
-#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-            Func<Task> act = async () => await _game.StartAsync(null, tokenO);
-#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
-            await act.Should().ThrowAsync<ArgumentNullException>();
-        }
-
-        [Theory, AutoData]
-        public async Task StartAsync_OnOPlayerNull_Throws(AuthorizationToken tokenX)
-        {
-#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-            Func<Task> act = async () => await _game.StartAsync(tokenX, null);
-#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
-            await act.Should().ThrowAsync<ArgumentNullException>();
-        }
-
-        [Theory, AutoData]
-        public async Task StartAsync_OnEqualPlayers_Throws(AuthorizationToken token)
-        {
-            Func<Task> act = async () => await _game.StartAsync(token, token);
-            await act.Should().ThrowAsync<ArgumentException>();
-        }
-
-        [Theory, AutoData]
-        public async Task StartAsync_OnNotInitialized_SetTimeoutReminder(AuthorizationToken playerX, AuthorizationToken playerO)
-        {
-            SetupAuthorizationTokens(playerX, playerO);
-
-            await _game.StartAsync(playerX, playerO);
+            await _game.StartAsync(state.XPlayer!, state.OPlayer!);
 
             _mockedGame.Verify(x => x.RegisterOrUpdateReminder(GameGrain.TimeoutCheckReminderName, GameGrain.TimeoutPeriod, GameGrain.TimeoutPeriod));
         }
@@ -123,6 +88,7 @@ namespace OrleanPG.Grains.UnitTests
         #region
         /// <summary>
         /// TODO: Test to big, split to three parts OR add state change notifier as separate entity
+        /// Each method calls engine, strores changes if updated state, notify subscribers => can be generalized
         /// </summary>
         [Theory, AutoData]
         public async Task TurnAsync_OnStateChangedByEngine_StoresChangesAndReturnNewStateAndNotifyObservers(

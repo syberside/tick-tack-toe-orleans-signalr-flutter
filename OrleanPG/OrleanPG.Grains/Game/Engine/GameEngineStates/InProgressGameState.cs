@@ -8,10 +8,10 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
 {
     internal class InProgressGameState : IGameEngineState
     {
-        private readonly GameState _state;
+        private readonly InitializedGameState _state;
         private readonly IWinChecker[] _winCheckers;
 
-        public InProgressGameState(GameState gameState, IWinChecker[] winCheckers)
+        public InProgressGameState(InitializedGameState gameState, IWinChecker[] winCheckers)
         {
             _state = gameState;
             _winCheckers = winCheckers;
@@ -19,10 +19,6 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
 
         public GameState Process(UserTurnAction action)
         {
-            if (!_state.IsInitialized)
-            {
-                throw new InvalidOperationException("Game is not initialized yet");
-            }
             var map = _state.Map;
             if (map.IsCellBusy(action.Position))
             {
@@ -43,7 +39,7 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
             var updatedMap = map.Update(action.Position, stepMarker);
             var status = GetNewStatus(action.StepBy, updatedMap);
 
-            return _state with { Status = status, Map = updatedMap };
+            return _state.AsGameState() with { Status = status, Map = updatedMap };
         }
 
         private GameStatus GetNewStatus(PlayerParticipation stepBy, GameMap map)
@@ -71,9 +67,9 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
         {
             if (_state.Status.IsEndStatus())
             {
-                return _state;
+                return _state.AsGameState();
             }
-            return _state with { Status = GameStatus.TimedOut };
+            return _state.AsGameState() with { Status = GameStatus.TimedOut };
         }
 
         private static GameStatus StepToNewStep(PlayerParticipation p)
@@ -83,5 +79,24 @@ namespace OrleanPG.Grains.Game.Engine.GameEngineStates
             => p == PlayerParticipation.X ? GameStatus.XWin : GameStatus.OWin;
 
         public GameState Process(InitializeAction action) => throw new InvalidOperationException();
+
+        internal class InitializedGameState
+        {
+            private readonly GameState _state;
+            public GameState AsGameState() => _state;
+
+            public GameMap Map => _state.Map;
+
+            public GameStatus Status => _state.Status;
+
+            public InitializedGameState(GameState state)
+            {
+                if (!state.IsInitialized)
+                {
+                    throw new ArgumentException($"State is not initialized: {state}");
+                }
+                _state = state;
+            }
+        }
     }
 }

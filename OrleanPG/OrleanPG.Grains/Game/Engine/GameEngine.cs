@@ -41,7 +41,8 @@ namespace OrleanPG.Grains.Game.Engine
             }
             else
             {
-                return new InProgressGameState(state, _winCheckers);
+                var initializedState = new InProgressGameState.InitializedGameState(state);
+                return new InProgressGameState(initializedState, _winCheckers);
             }
         }
     }

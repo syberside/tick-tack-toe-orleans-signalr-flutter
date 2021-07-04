@@ -117,6 +117,7 @@ namespace OrleanPG.Grains.UnitTests.Engine
             result.Should().BeEquivalentTo(expectedResult);
         }
 
+
         [Theory, AutoData]
         public void Process_UserTurnAction_OnNotInitializedByX_Throws(RandomizableUserTurnAction action, GameState state)
         {
@@ -124,7 +125,7 @@ namespace OrleanPG.Grains.UnitTests.Engine
 
             Action act = () => _gameEngine.Process(action, state);
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<ArgumentException>();
         }
 
         [Theory, AutoData]
@@ -134,8 +135,29 @@ namespace OrleanPG.Grains.UnitTests.Engine
 
             Action act = () => _gameEngine.Process(action, state);
 
+            act.Should().Throw<ArgumentException>();
+        }
+        #endregion
+
+        #region InitializeAction
+        [Theory, AutoData]
+        public void Process_InitializeAction_OnNotInitialized_AssignsPlayers(InitializeAction action, GameState state)
+        {
+            state = state with { OPlayer = null, XPlayer = null };
+
+            var result = _gameEngine.Process(action, state);
+
+            var expected = state with { XPlayer = action.XPlayer, OPlayer = action.OPlayer };
+            result.Should().BeEquivalentTo(expected);
+        }
+
+        [Theory, AutoData]
+        public void Process_InitializeAction_OnInitialized_Throws(InitializeAction action, GameState state)
+        {
+            Action act = () => _gameEngine.Process(action, state);
             act.Should().Throw<InvalidOperationException>();
         }
+
         #endregion
     }
 

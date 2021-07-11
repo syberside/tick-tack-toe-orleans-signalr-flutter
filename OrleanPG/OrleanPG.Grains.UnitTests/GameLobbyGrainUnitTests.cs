@@ -4,6 +4,7 @@ using FluentAssertions;
 using Moq;
 using OrleanPG.Grains.GameLobbyGrain.UnitTests.Helpers;
 using OrleanPG.Grains.Interfaces;
+using OrleanPG.Grains.Interfaces.Dtos;
 using Orleans;
 using Orleans.Runtime;
 using System;

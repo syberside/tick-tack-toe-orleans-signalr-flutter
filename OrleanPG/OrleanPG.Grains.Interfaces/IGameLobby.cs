@@ -1,4 +1,5 @@
-﻿using Orleans;
+﻿using OrleanPG.Grains.Interfaces.Dtos;
+using Orleans;
 using System.Threading.Tasks;
 
 namespace OrleanPG.Grains.Interfaces

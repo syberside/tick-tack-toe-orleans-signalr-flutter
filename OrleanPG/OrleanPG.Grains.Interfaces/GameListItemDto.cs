@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using OrleanPG.Grains.Interfaces.Dtos;
+using System.Collections.Generic;
 
 namespace OrleanPG.Grains.Interfaces
 {

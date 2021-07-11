@@ -1,4 +1,4 @@
-﻿using OrleanPG.Grains.Interfaces;
+﻿using OrleanPG.Grains.Interfaces.Dtos;
 using System.Collections.Generic;
 
 namespace OrleanPG.Grains.GameLobbyGrain

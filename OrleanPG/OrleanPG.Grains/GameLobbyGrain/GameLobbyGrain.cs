@@ -1,4 +1,5 @@
 ﻿using OrleanPG.Grains.Interfaces;
+using OrleanPG.Grains.Interfaces.Dtos;
 using Orleans;
 using Orleans.Runtime;
 using System;

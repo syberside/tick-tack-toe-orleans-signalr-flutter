@@ -51,7 +51,7 @@ namespace OrleanPG.Grains.Game
             }
             else
             {
-                // NOTE: Small optimisation to not call GetStatus twice (because it's involves some payload)
+                // NOTE: Small optimisation to exclude duplicate GetStatus calls (because it's involves some payload)
                 result = await GetStatus();
             }
 

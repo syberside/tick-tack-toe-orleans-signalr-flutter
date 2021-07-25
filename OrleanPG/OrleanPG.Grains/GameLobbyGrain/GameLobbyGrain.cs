@@ -12,8 +12,10 @@ namespace OrleanPG.Grains.GameLobbyGrain
         private readonly IPersistentState<GamesStorageState> _gameStates;
         private readonly IPersistentState<UserStates> _userStates;
         public GameLobbyGrain(
-              [PersistentState("game_lobby_game_states", "game_states_store")] IPersistentState<GamesStorageState> gameStates,
-              [PersistentState("game_lobby_user_states", "user_states_store")] IPersistentState<UserStates> userStates)
+                [PersistentState("game_lobby_game_states", "game_states_store")]
+                IPersistentState<GamesStorageState> gameStates,
+                [PersistentState("game_lobby_user_states", "user_states_store")]
+                IPersistentState<UserStates> userStates)
         {
             _gameStates = gameStates;
             _userStates = userStates;

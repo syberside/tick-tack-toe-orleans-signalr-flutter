@@ -1,277 +1,104 @@
-﻿using OrleanPG.Grains.Infrastructure;
+﻿using OrleanPG.Grains.Game.Engine;
+using OrleanPG.Grains.Game.Engine.Actions;
+using OrleanPG.Grains.Game.GrainLogic;
 using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Runtime;
-using Orleans.Streams;
 using System;
 using System.Threading.Tasks;
 
 namespace OrleanPG.Grains.Game
 {
+
     public class GameGrain : Grain, IGame, IGameInitializer
     {
-        private readonly IPersistentState<GameStorageData> _gameState;
-        private readonly IGrainIdProvider _grainIdProvider;
+        private readonly IPersistentState<GameState> _gameStateHolder;
+        private readonly IGameEngine _gameEngine;
+        private GameGrainLogic? _processer;
 
-        public const string TimeoutCheckReminderName = "timeout_check";
-        public static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
-        public const int GameSize = GameMap.GameSize;
-        private const int _maxIndex = GameSize - 1;
-
+        private const string TimeoutCheckReminderName = "timeout_check";
+        private static readonly TimeSpan TimeoutPeriod = TimeSpan.FromMinutes(1);
 
         public GameGrain(
-            [PersistentState("game_game_state", "game_state_store")] IPersistentState<GameStorageData> gameState,
-            IGrainIdProvider grainIdProvider)
+            [PersistentState("game_game_state", "game_state_store")]
+            IPersistentState<GameState> gameState,
+            IGameEngine gameEngine)
         {
-            _gameState = gameState;
-            _grainIdProvider = grainIdProvider;
+            _gameStateHolder = gameState;
+            _gameEngine = gameEngine;
         }
 
-        private async Task UpdateState(GameStorageData data)
+        public override async Task OnActivateAsync()
         {
-            _gameState.State = data;
-            await _gameState.WriteStateAsync();
-            await NotifyObservers();
-        }
-
-        private async Task NotifyObservers()
-        {
-            var update = await GetGameStatusDtoFromGameState();
             var streamProvider = GetStreamProvider(Constants.GameUpdatesStreamProviderName);
-            var grainId = _grainIdProvider.GetGrainId(this);
+            var grainId = this.GetPrimaryKey();
             var stream = streamProvider.GetStream<GameStatusDto>(grainId, Constants.GameUpdatesStreamName);
-            await stream.OnNextAsync(update);
+            var reminderHandle = new GrainReminderToReminderHandleAdaptor(
+                () => RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod),
+                async () =>
+                {
+                    var reminder = await GetReminder(TimeoutCheckReminderName);
+                    await UnregisterReminder(reminder);
+                }
+                );
+            var gameStateStore = new DelegatesToGameStateStoreAdapter(
+                () => _gameStateHolder.State,
+                async (state) =>
+                {
+                    _gameStateHolder.State = state;
+                    await _gameStateHolder.WriteStateAsync();
+                });
+            var gameLobby = GrainFactory.GetGrain<IGameLobby>(Guid.Empty);
+
+            _processer = new GameGrainLogic(
+                gameStateStore,
+                _gameEngine,
+                gameLobby,
+                stream,
+                reminderHandle
+                );
+            await base.OnActivateAsync();
         }
 
-        public async Task<GameStatusDto> StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)
+
+        public Task<GameStatusDto> StartAsync(AuthorizationToken playerX, AuthorizationToken playerO)
+            => ProcessAction(new InitializeAction(playerX, playerO));
+
+        public Task<GameStatusDto> TurnAsync(GameMapPoint position, AuthorizationToken player)
+            => ProcessAction(new UserTurnAction(position, GetParticipation(_processer!.GetState(), player)));
+
+        private async Task<GameStatusDto> ProcessAction(IGameAction action)
         {
-            if (playerX == null)
-            {
-                throw new ArgumentNullException();
-            }
-            if (playerO == null)
-            {
-                throw new ArgumentNullException();
-            }
-            if (playerO == playerX)
-            {
-                throw new ArgumentException();
-            }
-            if (_gameState.State.IsInitialized)
-            {
-                throw new InvalidOperationException();
-            }
-            await UpdateState(_gameState.State with { XPlayer = playerX, OPlayer = playerO });
-            await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
-
-            var result = await GetGameStatusDtoFromGameState();
-            return result;
+            await _processer!.ProcessAction(action);
+            return await _processer.GetStatus();
         }
 
-
-        public async Task<GameStatusDto> TurnAsync(int x, int y, AuthorizationToken player)
+        private static PlayerParticipation GetParticipation(GameState state, AuthorizationToken player)
         {
-            if (!_gameState.State.IsInitialized)
+            if (player == state.XPlayer)
             {
-                throw new InvalidOperationException();
+                return PlayerParticipation.X;
             }
-            if (x > _maxIndex)
+            if (player == state.OPlayer)
             {
-                throw new ArgumentOutOfRangeException(nameof(x), x, $"Should be less than {GameSize}");
+                return PlayerParticipation.O;
             }
-            if (y > _maxIndex)
-            {
-                throw new ArgumentOutOfRangeException(nameof(y), y, $"Should be less than {GameSize}");
-            }
-            if (_gameState.State.Map[x, y] != CellStatus.Empty)
-            {
-                throw new InvalidOperationException($"Cell {{{x};{y}}} already allocated by {(_gameState.State.Map[x, y] == CellStatus.X ? "X" : "O")}");
-            }
-
-            var stepMarker = CellStatus.Empty;
-            switch (_gameState.State.Status)
-            {
-                case GameState.OWin:
-                case GameState.XWin:
-                    throw new InvalidOperationException();
-                case GameState.XTurn:
-                    if (player != _gameState.State.XPlayer)
-                    {
-                        throw new InvalidOperationException();
-                    }
-                    stepMarker = CellStatus.X;
-                    break;
-                case GameState.OTurn:
-                    if (player != _gameState.State.OPlayer)
-                    {
-                        throw new InvalidOperationException();
-                    }
-                    stepMarker = CellStatus.O;
-                    break;
-                case GameState.TimedOut:
-                    throw new InvalidOperationException();
-                default:
-                    throw new NotSupportedException();
-            }
-
-
-            var map = _gameState.State.Map.Clone();
-            map[x, y] = stepMarker;
-            var status = GetNewStatus(stepMarker, x, y, map);
-
-            await UpdateState(_gameState.State with
-            {
-                Status = status,
-                Map = map,
-            });
-            await RegisterOrUpdateReminder(TimeoutCheckReminderName, TimeoutPeriod, TimeoutPeriod);
-
-            return await GetGameStatusDtoFromGameState();
+            throw new ArgumentException("Player is not a participant of this game");
         }
 
-        private GameState GetNewStatus(CellStatus status, int x, int y, GameMap gameMap)
-        {
-            if (status != CellStatus.O && status != CellStatus.X)
-            {
-                throw new ArgumentException();
-            }
-
-            //check for draw
-            if (!gameMap.HaveEmptyCells)
-            {
-                return GameState.Draw;
-            }
-
-            //check row
-            for (var i = 0; i < GameSize; i++)
-            {
-                if (gameMap[i, y] != status)
-                {
-                    break;
-                }
-                if (i == GameSize - 1)
-                {
-                    return StepToWinState(status);
-
-                }
-            }
-
-            //check col
-            for (var i = 0; i < GameSize; i++)
-            {
-                if (gameMap[x, i] != status)
-                {
-                    break;
-                }
-                if (i == GameSize - 1)
-                {
-                    return StepToWinState(status);
-                }
-            }
-
-            //check diagonal 1
-            if (x == y)
-            {
-                for (var i = 0; i < GameSize; i++)
-                {
-                    if (gameMap[i, i] != status)
-                    {
-                        break;
-                    }
-                    if (i == GameSize - 1)
-                    {
-                        return StepToWinState(status);
-                    }
-                }
-            }
-
-            //check diagonal 2
-            if (x + y == GameSize - 1)
-            {
-
-                for (var i = 0; i < GameSize; i++)
-                {
-                    if (gameMap[GameSize - i - 1, i] != status)
-                    {
-                        break;
-                    }
-                    if (i == GameSize - 1)
-                    {
-                        return StepToWinState(status);
-
-                    }
-                }
-            }
-
-            return StepToNewStep(status);
-        }
-
-        private static GameState StepToNewStep(CellStatus status) => status == CellStatus.X ? GameState.OTurn : GameState.XTurn;
-
-        private static GameState StepToWinState(CellStatus status) => status == CellStatus.X ? GameState.XWin : GameState.OWin;
-
-        public Task<GameStatusDto> GetStatus() => GetGameStatusDtoFromGameState();
+        public Task<GameStatusDto> GetStatus() => _processer!.GetStatus();
 
         public async Task ReceiveReminder(string reminderName, TickStatus status)
         {
             switch (reminderName)
             {
                 case TimeoutCheckReminderName:
-                    await CheckTimeout();
-                    break;
-            }
-        }
-
-        private async Task CheckTimeout()
-        {
-            switch (_gameState.State.Status)
-            {
-                case GameState.XWin:
-                case GameState.OWin:
-                case GameState.TimedOut:
-                    break;
-                case GameState.OTurn:
-                case GameState.XTurn:
-                    await UpdateState(_gameState.State with { Status = GameState.TimedOut });
+                    await _processer!.ProcessAction(TimeOutAction.Instance);
                     break;
                 default:
-                    throw new NotImplementedException();
+                    throw new InvalidOperationException($"Unknown reminder: {reminderName}");
             }
-            var reminder = await GetReminder(TimeoutCheckReminderName);
-            await UnregisterReminder(reminder);
-        }
-
-        /// <summary>
-        /// NOTE: Required for unit tests
-        /// </summary>
-        public new virtual Task<IGrainReminder> GetReminder(string reminderName) => base.GetReminder(reminderName);
-
-        /// <summary>
-        /// NOTE: Required for unit tests
-        /// </summary>
-        public new virtual Task UnregisterReminder(IGrainReminder reminder) => base.UnregisterReminder(reminder);
-
-        /// <summary>
-        /// NOTE: Required for unit tests
-        /// </summary>
-        public new virtual Task<IGrainReminder> RegisterOrUpdateReminder(string reminderName, TimeSpan dueTime, TimeSpan period)
-            => base.RegisterOrUpdateReminder(reminderName, dueTime, period);
-
-        /// <summary>
-        /// NOTE: Required for unit tests
-        /// </summary>
-        public new virtual IGrainFactory GrainFactory => base.GrainFactory;
-
-        /// <summary>
-        /// NOTE: Required for unit tests
-        /// </summary>
-        public new virtual IStreamProvider GetStreamProvider(string name) => base.GetStreamProvider(name);
-
-        private async Task<GameStatusDto> GetGameStatusDtoFromGameState()
-        {
-            var lobby = GrainFactory.GetGrain<IGameLobby>(Guid.Empty);
-            var userNames = await lobby.ResolveUserNamesAsync(_gameState.State.XPlayer, _gameState.State.OPlayer);
-            return new GameStatusDto(_gameState.State.Status, _gameState.State.Map, userNames[0], userNames[1]);
         }
     }
 }
+

@@ -1,11 +1,11 @@
-﻿using OrleanPG.Grains.Infrastructure;
+﻿using OrleanPG.Grains.Game.Engine;
+using OrleanPG.Grains.Infrastructure;
 using OrleanPG.Grains.Interfaces;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
-using System.Threading.Tasks;
-using System.Linq;
 using System;
+using System.Threading.Tasks;
 
 namespace OrleanPG.Grains.GameBot
 {
@@ -49,19 +49,20 @@ namespace OrleanPG.Grains.GameBot
                 await CleanupAsync();
             }
 
-            var takeStepForO = update.Status == GameState.OTurn && !_botData.State.PlayForX;
-            var takeStepForX = update.Status == GameState.XTurn && _botData.State.PlayForX;
+            var takeStepForO = update.Status == GameStatus.OTurn && !_botData.State.PlayForX;
+            var takeStepForX = update.Status == GameStatus.XTurn && _botData.State.PlayForX;
             var takeStep = takeStepForO || takeStepForX;
             if (!takeStep)
             {
                 return;
             }
 
-            (int x, int y) = GetNextTurn(update);
+            var gameMap = new GameMap(update.GameMap.Data);
+            var nextTurnPosition = GetNextTurn(gameMap);
             var authToken = _botData.State.Token;
 
             var game = GrainFactory.GetGrain<IGame>(grainId);
-            await game.TurnAsync(x, y, authToken);
+            await game.TurnAsync(nextTurnPosition, authToken);
         }
 
         private async Task CleanupAsync()
@@ -73,9 +74,9 @@ namespace OrleanPG.Grains.GameBot
             await _botData.ClearStateAsync();
         }
 
-        private (int x, int y) GetNextTurn(GameStatusDto update)
+        private GameMapPoint GetNextTurn(GameMap gameMap)
         {
-            var availableCells = update.GameMap.GetAvailableCells();
+            var availableCells = gameMap.GetAvailableCells();
             var randomPosition = _random.Next(availableCells.Length);
             return availableCells[randomPosition];
         }

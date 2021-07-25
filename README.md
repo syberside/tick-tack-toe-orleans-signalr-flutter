@@ -1,9 +1,9 @@
 # Introduction
 This project is a playground to try the following technologies:
-* Azure
 * Microsoft Orleans
 * SinglaR
 * Flutter
+* Azure
 
 # Project structure
 
